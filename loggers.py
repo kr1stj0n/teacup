@@ -632,8 +632,14 @@ def start_qdisc_logger(file_prefix='', remote_dir='', local_dir='.'):
     put(config.TPCONF_script_path + '/qdisc_logger.sh', '/usr/bin')
     run('chmod a+x /usr/bin/qdisc_logger.sh')
 
+    sample_interval = 0.01
+    try:
+        sample_interval = float(config.TPCONF_web10g_poll_interval) / 1000.0
+    except AttributeError:
+        pass
+
     # run qdisc_logger.sh script
-    pid = runbg('qdisc_logger.sh %f %s %s' % (sample_interval, 'ifb1', 'pie',
+    pid = runbg('qdisc_logger.sh %f %s %s %s' % (sample_interval, 'ifb1', 'pie',
                                               logfile))
 
     bgproc.register_proc_later(

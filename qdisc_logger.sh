@@ -51,7 +51,7 @@ rm -f $LOG_FILE
 
 while [ 1 ] ; do
 	TIME_1=`date +%s.%N`
-	CMD="tc -s qdisc show dev ${INTERFACE} | grep ${QDISC}"
+	CMD="tc -s qdisc show dev ${INTERFACE} | sed -n '/${QDISC}/,$p'"
         OUTPUT=$(eval $CMD)
 	echo "$TIME_1" >> $LOG_FILE
 	echo " " >> $LOG_FILE
