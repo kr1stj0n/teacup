@@ -598,22 +598,22 @@ def start_cpu_logger(file_prefix='', remote_dir='', local_dir='.'):
            logfile)
 
 
-def monitor_queue(iface, interval_sec = 0.01, fname):
-    qlen_regex = re.compile(r'backlog\s[^\s]+\s([\d]+)p')
-    qdelay_regex = re.compile(r'qdelay\s([\d]+)us')
-    cmd = "tc -s qdisc show dev %s" % (iface)
-    while True:
-        timestamp = "%f" % time.time()
-        p = Popen(cmd, shell=True, stdout=PIPE)
-        output = p.stdout.read()
-        qlen_matches = qlen_regex.findall(output)
-        qdelay_matches = qdelay_regex.findall(output)
+# def monitor_queue(interval_sec, iface, fname):
+#     qlen_regex = re.compile(r'backlog\s[^\s]+\s([\d]+)p')
+#     qdelay_regex = re.compile(r'qdelay\s([\d]+)us')
+#     cmd = "tc -s qdisc show dev %s" % (iface)
+#     while True:
+#         timestamp = "%f" % time.time()
+#         p = Popen(cmd, shell=True, stdout=PIPE, close_fds=True)
+#         output = p.stdout.read()
+#         qlen_matches = qlen_regex.findall(output)
+#         qdelay_matches = qdelay_regex.findall(output)
 
-        if qlen_matches and qdelay_matches and len(matches) > 1:
-            open(fname, 'a').write(str(timestamp) + ' ' + str(qlen_matches) + \
-                    str(qdelay_matches))
-        sleep(interval_sec)
-    return
+#         if qlen_matches and qdelay_matches and len(matches) > 1:
+#             open(fname, 'a').write(str(timestamp) + ' ' + str(qlen_matches) + \
+#                     str(qdelay_matches))
+#         time.sleep(interval_sec)
+#     return
 
 
 ## Start queue logger
@@ -628,19 +628,20 @@ def start_qdisc_logger(file_prefix='', remote_dir='', local_dir='.'):
     logfile = remote_dir + file_prefix + '_' + \
             env.host_string.replace(":", "_") + "_qdisc_stats.log"
 
-    host = env.host_string.split(':')[0]
+    # make sure script is there
+    put(config.TPCONF_script_path + '/qdisc_logger.sh', '/usr/bin')
+    run('chmod a+x /usr/bin/qdisc_logger.sh')
 
-    # spawn Process()
-    p = Process(target=monitor_queue,
-                args=('ifb1', 0.01, logfile))
-    p.start()
+    # run qdisc_logger.sh script
+    pid = runbg('qdisc_logger.sh %f %s %s' % (sample_interval, 'ifb1', 'pie',
+                                              logfile))
 
     bgproc.register_proc_later(
            env.host_string,
            local_dir,
            'qdisclogger',
            '00',
-           p.pid,
+           pid,
            logfile)
 
 

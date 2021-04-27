@@ -51,7 +51,7 @@ from hostsetup import init_host, init_ecn, init_cc_algo, init_router, \
     init_topology_host
 from loggers import start_tcpdump, stop_tcpdump, start_tcp_logger, \
     stop_tcp_logger, start_loggers, log_sysdata, log_queue_stats, \
-    log_config_params, log_host_tcp, start_bc_ping_loggers
+    log_qdisc_stats, log_config_params, log_host_tcp, start_bc_ping_loggers
 from routersetup import init_pipe, show_pipes
 from trafficgens import start_iperf, start_ping, \
     start_http_server, start_httperf, \

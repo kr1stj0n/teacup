@@ -557,6 +557,7 @@ def kill_old_processes():
             with settings(warn_only=True):
                 run('rmmod ttprobe')
             #run('killall web10g_logger.sh')
+            run('killall qdisc_logger.sh')
             run('killall web10g-logger')
         elif htype == 'Darwin':
             run('killall tcpdump', pty=False)
