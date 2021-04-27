@@ -940,11 +940,11 @@ def guess_version_web10g(test_id=''):
 		capture=True)
 
         if int(colnum) == 122:
-	    return '2.0.7'
-	elif int(colnum) == 128:
-	    return '2.0.9'
-	else:
-	    return '2.0.7'
+            return '2.0.7'
+        elif int(colnum) == 128:
+            return '2.0.9'
+        else:
+            return '2.0.7'
     except:
         return '2.0.7'
 
@@ -1591,6 +1591,184 @@ def analyse_tcp_stat(test_id='', out_dir='', replot_only='0', source_filter='',
     # done
     puts('\n[MAIN] COMPLETED plotting TCP Statistic %s \n' % out_name)
 
+################################################################################
+
+## Extract some TCP statistic (based on siftr/web10g/ttprobe output)
+## The extracted files have an extension of .tcpstat_<num>, where <num> is the index
+## of the statistic. The format is CSV with the columns:
+## 1. Timestamp RTT measured (seconds.microseconds)
+## 2. TCP statistic chosen
+#  @param test_id Test ID prefix of experiment to analyse
+#  @param out_dir Output directory for results
+#  @param replot_only Don't extract data again that is already extracted
+#  @param source_filter Filter on specific sources
+#  @param siftr_index Integer number of the column in siftr log files
+#                     (note if you have sitfr and web10g logs, you must also
+#                     specify web10g_index) (default = 9, CWND)
+#  @param web10g_index Integer number of the column in web10g log files (note if
+#                      you have web10g and siftr logs, you must also specify siftr_index)
+#                      (default = 26, CWND)
+#                      example: analyse_tcp_stat(siftr_index=17,web10_index=23,...)
+#                      would plot smoothed RTT estimates.
+#  @param ttprobe_index Integer number of the column in ttprobe log files
+#                     (note if you have ttprobe, sitfr and web10g logs, you must also
+#                     specify sitfr_index and web10g_index) (default = 10, CWND)
+#  @param ts_correct '0' use timestamps as they are (default)
+#                    '1' correct timestamps based on clock offsets estimated
+#                        from broadcast pings
+#  @param io_filter  'i' only use statistics from incoming packets
+#                    'o' only use statistics from outgoing packets
+#                    'io' use statistics from incooming and outgoing packets
+#                    (only effective for SIFTR files)
+#  @return Test ID list, map of flow names to interim data file names and
+#          map of file names and group IDs
+def _extract_tcp_stat(test_id='', out_dir='', replot_only='0', source_filter='',
+                     siftr_index='9', web10g_index='26', ttprobe_index='10',
+                      ts_correct='1', io_filter='o'):
+    "Extract TCP Statistic"
+
+    test_id_arr = test_id.split(';')
+    if len(test_id_arr) == 0 or test_id_arr[0] == '':
+        abort('Must specify test_id parameter')
+
+    # output smoothed rtt and improved sample rtt (patched siftr required),
+    # post process to get rtt in milliseconds
+    (files1,
+     groups1) = extract_siftr(test_id,
+                              out_dir,
+                              replot_only,
+                              source_filter,
+                              siftr_index,
+                              'tcpstat_' + siftr_index,
+                              ts_correct=ts_correct,
+                              io_filter=io_filter)
+
+    # output smoothed RTT and sample RTT in milliseconds
+    (files2,
+     groups2) = extract_web10g(test_id,
+                               out_dir,
+                               replot_only,
+                               source_filter,
+                               web10g_index,
+                               'tcpstat_' + web10g_index,
+                               ts_correct=ts_correct)
+
+    (files3,
+     groups3) = extract_ttprobe(test_id,
+                               out_dir,
+                               replot_only,
+                               source_filter,
+                               ttprobe_index,
+                               'tcpstat_' + ttprobe_index,
+                               ts_correct=ts_correct,
+                               io_filter=io_filter)
+
+    # to deal with two Linux loggers for same experiments i.e. 'TPCONF_linux_tcp_logger = 'both'
+    inters = list(set(files2).intersection(files3))
+    if inters is not None:
+        try:
+            logger = os.environ['LINUX_TCP_LOGGER']
+        except:
+            logger = ''
+        for i in inters:
+            if logger == 'ttprobe':
+                del files2[i]
+            elif logger == 'web10g':
+                del files3[i]
+            else:
+                files2['w' + i] = files2.pop(i)
+
+    all_files = dict(files1.items() + files2.items() + files3.items())
+    all_groups = dict(groups1.items() + groups2.items() + groups3.items())
+
+    return (test_id_arr, all_files, all_groups)
+
+
+## Extract some TCP statistic (based on siftr/web10g/ttprobe output)
+## SEE _extract_tcp_stat
+@task
+def extract_tcp_stat(test_id='', out_dir='', replot_only='0', source_filter='',
+                     siftr_index='9', web10g_index='26', ttprobe_index='10',
+                     ts_correct='1', io_filter='o'):
+    "Extract TCP Statistic"
+
+    _extract_tcp_stat(test_id, out_dir, replot_only, source_filter,
+                      siftr_index, web10g_index, ttprobe_index,
+                      ts_correct, io_filter)
+
+    # done
+    puts('\n[MAIN] COMPLETED extracting TCP Statistic %s \n' % test_id)
+
+
+## Plot some TCP statistic (based on siftr/web10g/ttprobe output)
+#  @param test_id Test ID prefix of experiment to analyse
+#  @param out_dir Output directory for results
+#  @param replot_only Don't extract data again, just redo the plot
+#  @param source_filter Filter on specific sources
+#  @param min_values Minimum number of data points in file, if fewer points
+#                    the file is ignored
+#  @param omit_const '0' don't omit anything,
+#                    '1' omit any Series that are 100% constant
+#                        (e.g. because there was no data flow)
+#  @param siftr_index Integer number of the column in siftr log files
+#                     (note if you have sitfr and web10g logs, you must also
+#                     specify web10g_index) (default = 9, CWND)
+#  @param web10g_index Integer number of the column in web10g log files (note if
+#                      you have web10g and siftr logs, you must also specify siftr_index)
+#                      (default = 26, CWND)
+#		       example: analyse_tcp_stat(siftr_index=17,web10_index=23,...)
+#                      would plot smoothed RTT estimates.
+#  @param ttprobe_index Integer number of the column in ttprobe log files
+#                     (note if you have ttprobe, sitfr and web10g logs, you must also
+#                     specify sitfr_index and web10g_index) (default = 10, CWND)
+#  @param ylabel Label for y-axis in plot
+#  @param yscaler Scaler for y-axis values (must be a floating point number)
+#  @param ymin Minimum value on y-axis
+#  @param ymax Maximum value on y-axis
+#  @param lnames Semicolon-separated list of legend names
+#  @param stime Start time of plot window in seconds (by default 0.0 = start of experiment)
+#  @param etime End time of plot window in seconds (by default 0.0 = end of experiment)
+#  @param out_name Name prefix for resulting pdf file
+#  @param pdf_dir Output directory for pdf files (graphs), if not specified it is
+#                 the same as out_dir
+#  @param ts_correct '0' use timestamps as they are (default)
+#                    '1' correct timestamps based on clock offsets estimated
+#                        from broadcast pings
+#  @param io_filter  'i' only use statistics from incoming packets
+#                    'o' only use statistics from outgoing packets
+#                    'io' use statistics from incooming and outgoing packets
+#                    (only effective for SIFTR files)
+#  @param plot_params Set env parameters for plotting
+#  @param plot_script Specify the script used for plotting, must specify full path
+@task
+def analyse_tcp_stat(test_id='', out_dir='', replot_only='0', source_filter='',
+                     min_values='3', omit_const='0', siftr_index='9', web10g_index='26',
+                     ttprobe_index='10',
+                     ylabel='', yscaler='1.0', ymin='0', ymax='0', lnames='',
+                     stime='0.0', etime='0.0', out_name='', pdf_dir='', ts_correct='1',
+                     io_filter='o', plot_params='', plot_script=''):
+    "Compute TCP Statistic"
+
+    (test_id_arr,
+     out_files,
+     out_groups) =_extract_tcp_stat(test_id, out_dir, replot_only, source_filter,
+                      siftr_index, web10g_index, ttprobe_index, ts_correct, io_filter)
+
+    if len(out_files) > 0:
+        (out_files, out_groups) = filter_min_values(out_files, out_groups, min_values)
+        out_name = get_out_name(test_id_arr, out_name)
+        plot_time_series(out_name, out_files, ylabel, 2, float(yscaler), 'pdf',
+                         out_name + '_tcpstat_' +
+                         siftr_index + '_' + web10g_index + '_' + ttprobe_index,
+                         pdf_dir=pdf_dir, sep=",", omit_const=omit_const,
+                         ymin=float(ymin), ymax=float(ymax), lnames=lnames, stime=stime,
+                         etime=etime, groups=out_groups, plot_params=plot_params,
+                         plot_script=plot_script, source_filter=source_filter)
+
+    # done
+    puts('\n[MAIN] COMPLETED plotting TCP Statistic %s \n' % out_name)
+
+################################################################################
 
 ## Extract packet sizes. Plot function computes throughput based on the packet sizes.
 ## The extracted files have an extension of .psiz. The format is CSV with the
@@ -1945,7 +2123,7 @@ def analyse_all(exp_list='experiments_completed.txt', test_id='', out_dir='',
                 smoothed='1', resume_id='', lnames='', link_len='0', stime='0.0',
                 etime='0.0', out_name='', pdf_dir='', ts_correct='1',
                 io_filter='o', web10g_version='2.0.9', plot_params='', plot_script=''):
-    "Compute SPP RTT, TCP RTT, CWND and throughput statistics"
+    "Compute SPP RTT, TCP RTT, CWND, queue and throughput statistics"
 
     experiments = get_experiment_list(exp_list, test_id)
 

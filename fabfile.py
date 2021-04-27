@@ -96,7 +96,7 @@ except ImportError:
 
 from analyse import analyse_rtt, analyse_cwnd, analyse_tcp_rtt, \
         analyse_throughput, analyse_all, analyse_dash_goodput, \
-        analyse_tcp_stat
+        analyse_tcp_stat, analyse_queue
 
 try:
     from analyse import analyse_incast
@@ -106,7 +106,7 @@ except ImportError:
 try:
     from analyse import extract_rtt, extract_cwnd, extract_tcp_rtt, \
         extract_all, extract_dash_goodput, \
-        extract_tcp_stat, extract_incast
+        extract_tcp_stat, extract_queue, extract_incast
 except ImportError:
     pass
 

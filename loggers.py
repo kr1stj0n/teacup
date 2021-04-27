@@ -32,6 +32,8 @@
 import re
 import time
 import socket
+from subprocess import *
+from multiprocessing import Process
 from fabric.api import task, warn, local, run, execute, abort, hosts, env, \
     settings, parallel, serial, put
 import bgproc
@@ -441,6 +443,24 @@ def log_queue_stats(file_prefix='', remote_dir='', local_dir='.'):
     getfile(file_name, local_dir)
 
 
+## Get qdisc statistics from router
+#  @param file_prefix Prefix for file name
+#  @param remote_dir Directrory on remote where file is created
+#  @param local_dir Directory on control host where file is copied to
+@task
+@parallel
+def log_qdisc_stats(file_prefix='', remote_dir='', local_dir='.'):
+    "Get qdisc statistics after experiment"
+
+    if remote_dir != '' and remote_dir[-1] != '/':
+        remote_dir += '/'
+
+    file_name = remote_dir + file_prefix + "_" + \
+        env.host_string.replace(":", "_") + "_qdisc_stats.log"
+
+    getfile(file_name, local_dir)
+
+
 ## Start tcpdump (assume only one tcpdump per host)
 #  @param file_prefix Prefix for file name
 #  @param remote_dir Directrory on remote where file is created
@@ -480,7 +500,7 @@ def start_tcpdump(
     for interface in interfaces:
 
         if env.host_string in config.TPCONF_router:
-	    if internal_int == '1':
+            if internal_int == '1':
                 file_name = remote_dir + file_prefix + '_' + \
                     env.host_string.replace(':', '_') + \
                     '_' + interface + '_router.dmp'
@@ -552,7 +572,7 @@ def stop_tcpdump(file_prefix='', remote_dir='', local_dir='.'):
 #  @param local_dir Directory for .start file
 @parallel
 def start_cpu_logger(file_prefix='', remote_dir='', local_dir='.'):
-    "Start CPU loade logger"
+    "Start CPU load logger"
 
     # log cpu load
     logfile = remote_dir + file_prefix + '_' + \
@@ -575,6 +595,52 @@ def start_cpu_logger(file_prefix='', remote_dir='', local_dir='.'):
            'cpuloadlogger',
            '00',
            pid,
+           logfile)
+
+
+def monitor_queue(iface, interval_sec = 0.01, fname):
+    qlen_regex = re.compile(r'backlog\s[^\s]+\s([\d]+)p')
+    qdelay_regex = re.compile(r'qdelay\s([\d]+)us')
+    cmd = "tc -s qdisc show dev %s" % (iface)
+    while True:
+        timestamp = "%f" % time.time()
+        p = Popen(cmd, shell=True, stdout=PIPE)
+        output = p.stdout.read()
+        qlen_matches = qlen_regex.findall(output)
+        qdelay_matches = qdelay_regex.findall(output)
+
+        if qlen_matches and qdelay_matches and len(matches) > 1:
+            open(fname, 'a').write(str(timestamp) + ' ' + str(qlen_matches) + \
+                    str(qdelay_matches))
+        sleep(interval_sec)
+    return
+
+
+## Start queue logger
+#  @param file_prefix Prefix for file name
+#  @param remote_dir Directrory on remote where file is created
+#  @param local_dir Directory for .start file
+@parallel
+def start_qdisc_logger(file_prefix='', remote_dir='', local_dir='.'):
+    "Start qdisc logger"
+
+    # log queue length and queue delay
+    logfile = remote_dir + file_prefix + '_' + \
+            env.host_string.replace(":", "_") + "_qdisc_stats.log"
+
+    host = env.host_string.split(':')[0]
+
+    # spawn Process()
+    p = Process(target=monitor_queue,
+                args=('ifb1', 0.01, logfile))
+    p.start()
+
+    bgproc.register_proc_later(
+           env.host_string,
+           local_dir,
+           'qdisclogger',
+           '00',
+           p.pid,
            logfile)
 
 
@@ -949,6 +1015,13 @@ def start_loggers(file_prefix='', remote_dir='', local_dir='.'):
         remote_dir,
         local_dir,
         hosts=config.TPCONF_hosts)
+
+    # start qdisc loggers
+    execute(start_qdisc_logger,
+            file_prefix,
+            remote_dir,
+            local_dir,
+            hosts=config.TPCONF_router)
 
     # register logger processes started in parallel
     bgproc.register_deferred_procs(local_dir)
