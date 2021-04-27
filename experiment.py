@@ -361,11 +361,6 @@ def run_experiment(test_id='', test_id_pfx='', *args, **kwargs):
     # shut everything down and get log data
     execute(stop_processes, local_dir=test_id_pfx)
     execute(
-        log_qdisc_stats,
-        file_prefix=test_id,
-        local_dir=test_id_pfx,
-        hosts=config.TPCONF_router)
-    execute(
         log_queue_stats,
         file_prefix=test_id,
         local_dir=test_id_pfx,
