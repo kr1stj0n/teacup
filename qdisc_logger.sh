@@ -50,20 +50,19 @@ LOG_FILE=$4
 rm -f $LOG_FILE
 
 while [ 1 ] ; do
-	TIME_1=`date +%s.%N`
-	CMD="tc -s qdisc show dev ${INTERFACE} | sed -n '/${QDISC}/,$p'"
-        OUTPUT=$(eval $CMD)
-	echo "$TIME_1" >> $LOG_FILE
-	echo " " >> $LOG_FILE
+        BEFORE=`date +%s.%N`
+        CMD=`tc -s qdisc show dev ${INTERFACE} | grep -Pzo '.*'${QDISC}'(.*\n)*'`
+        OUTPUT="$(echo $CMD)"
+	echo -n "$BEFORE," >> $LOG_FILE
 
         QLEN=$(echo "$OUTPUT" | grep -Po 'backlog \K.*' | awk '{print ($2+0)}')
+        echo -n "$QLEN," >> $LOG_FILE
+
         QDELAY=$(echo "$OUTPUT" | grep -Po 'qdelay \K.*' | awk '{print ($1+0)}')
+        echo -n "$QDELAY" >> $LOG_FILE
+        printf "\n" >> $LOG_FILE
 
-        echo "$QLEN" >> $LOG_FILE
-	echo " " >> $LOG_FILE
-
-        echo "$QDELAY" >> $LOG_FILE
-	TIME_2=`date +%s.%N`
-	SLEEP_TIME=`echo $TIME_1 $TIME_2 $INTERVAL | awk '{ st = $3 - ($2 - $1) ; if ( st < 0 ) st = 0 ; print st }'`
+	AFTER=`date +%s.%N`
+	SLEEP_TIME=`echo $BEFORE $AFTER $INTERVAL | awk '{ st = $3 - ($2 - $1) ; if ( st < 0 ) st = 0 ; print st }'`
 	sleep $SLEEP_TIME
 done
