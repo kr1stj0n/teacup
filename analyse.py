@@ -1286,7 +1286,7 @@ def extract_qdelay(test_id='', out_dir='', replot_only='0', out_file_ext='',
 #  @return Map of flow names to interim data file names and
 #          map of file names and group IDs
 def extract_qlen(test_id='', out_dir='', replot_only='0', out_file_ext='',
-                   post_proc=None):
+                 post_proc=None):
 
     out_files = {}
     out_groups = {}
@@ -2106,10 +2106,8 @@ def extract_all(exp_list='experiments_completed.txt', test_id='', out_dir='',
                     ts_correct=ts_correct)
             execute(extract_cwnd, test_id, out_dir, replot_only, source_filter,
                     ts_correct=ts_correct, io_filter=io_filter)
-            execute(extract_qlen, test_id, out_dir, replot_only, source_filter,
-                    ts_correct=ts_correct, io_filter=io_filter)
-            execute(extract_qdelay, test_id, out_dir, replot_only, source_filter,
-                    ts_correct=ts_correct, io_filter=io_filter)
+            execute(extract_qlen, test_id, out_dir, replot_only)
+            execute(extract_qdelay, test_id, out_dir, replot_only)
             execute(extract_tcp_rtt, test_id, out_dir, replot_only, source_filter,
                     ts_correct=ts_correct, io_filter=io_filter, web10g_version=web10g_version)
             execute(extract_pktsizes, test_id, out_dir, replot_only, source_filter,
