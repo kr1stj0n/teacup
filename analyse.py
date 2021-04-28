@@ -1263,7 +1263,7 @@ def extract_qdelay(test_id='', out_dir='', replot_only='0', out_file_ext='',
 
             out = out_dirname + test_id + '_' + host + '_qdisc.' + out_file_ext
             if replot_only == '0' or not os.path.isfile(out) :
-                local('zcat %s | awk -F',' \'{print $1,%3}\' > %s' %
+                local('zcat %s | awk -F\',\' \'{print $1","$3}\' > %s' %
                         (qdisc_file, out))
 
             if post_proc is not None:
@@ -1285,7 +1285,7 @@ def extract_qdelay(test_id='', out_dir='', replot_only='0', out_file_ext='',
 #  @param post_proc Name of function used for post-processing the extracted data
 #  @return Map of flow names to interim data file names and
 #          map of file names and group IDs
-def extract_qdelay(test_id='', out_dir='', replot_only='0', out_file_ext='',
+def extract_qlen(test_id='', out_dir='', replot_only='0', out_file_ext='',
                    post_proc=None):
 
     out_files = {}
@@ -1311,7 +1311,7 @@ def extract_qdelay(test_id='', out_dir='', replot_only='0', out_file_ext='',
 
             out = out_dirname + test_id + '_' + host + '_qdisc.' + out_file_ext
             if replot_only == '0' or not os.path.isfile(out) :
-                local('zcat %s | awk -F',' \'{print $1,%2}\' > %s' %
+                local('zcat %s | awk -F\',\' \'{print $1","$2}\' > %s' %
                         (qdisc_file, out))
 
             if post_proc is not None:
