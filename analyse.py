@@ -1048,7 +1048,7 @@ def extract_web10g(test_id='', out_dir='', replot_only='0', source_filter='',
                         post_proc(web10g_file, out)
 
                 if sfil.is_in(flow_name):
-		    if ts_correct == '1':
+                    if ts_correct == '1':
                         host = local(
                             'echo %s | sed "s/.*_\([a-z0-9\.]*\)_web10g.log.gz/\\1/"' %
                             web10g_file,
@@ -1218,6 +1218,219 @@ def analyse_cwnd(test_id='', out_dir='', replot_only='0', source_filter='',
 
     # done
     puts('\n[MAIN] COMPLETED plotting CWND %s \n' % out_name)
+
+
+## Delete the last line
+#  @param qdisc_file Data
+#  @param out_file File name for post processed data
+def post_proc_qdisc(qdisc_file, out_file):
+    tmp_file = local('mktemp "/tmp/tmp.XXXXXXXXXX"', capture=True)
+    local(
+        'cat %s | sed -e "$ d" > %s && mv %s %s' %
+        (out_file, tmp_file, tmp_file, out_file))
+
+
+## Extract qdelay from qdisc stats files
+#  @param test_id Test ID prefix of experiment to analyse
+#  @param out_dir Output directory for results
+#  @param replot_only Don't extract data again, just redo the plot
+#  @param out_file_ext Extension for the output file containing the extracted data
+#  @param post_proc Name of function used for post-processing the extracted data
+#  @return Map of flow names to interim data file names and
+#          map of file names and group IDs
+def extract_qdelay(test_id='', out_dir='', replot_only='0', out_file_ext='',
+                   post_proc=None):
+
+    out_files = {}
+    out_groups = {}
+
+    test_id_arr = test_id.split(';')
+
+    group = 1
+    for test_id in test_id_arr:
+
+    # first process qdisc files
+    qdisc_files = get_testid_file_list('', test_id,
+                                       'qdisc_stats.log.gz', '', no_abort=True)
+
+    for qdisc_file in qdisc_files:
+        # get input directory name and create result directory if necessary
+        out_dirname = get_out_dir(qdisc_file, out_dir)
+        host = local(
+                'echo %s | sed "s/.*_\([a-z0-9\.]*\)_qdisc_stats.log.gz/\\1/"' %
+                qdisc_file,
+                capture=True)
+
+        out = out_dirname + test_id + '_' + host + '_qdisc.' + out_file_ext
+        if replot_only == '0' or not os.path.isfile(out) :
+            local('zcat %s | awk -F',' '{print $1,%3}'> %s' % (qdisc_file, out))
+
+        if post_proc is not None:
+            post_proc(qdisc_file, out)
+
+        out_files[long_flow_name] = out
+        out_groups[out] = group
+
+        group += 1
+
+    return (out_files, out_groups)
+
+
+## Extract qdelay from qdisc stats files
+#  @param test_id Test ID prefix of experiment to analyse
+#  @param out_dir Output directory for results
+#  @param replot_only Don't extract data again, just redo the plot
+#  @param out_file_ext Extension for the output file containing the extracted data
+#  @param post_proc Name of function used for post-processing the extracted data
+#  @return Map of flow names to interim data file names and
+#          map of file names and group IDs
+def extract_qdelay(test_id='', out_dir='', replot_only='0', out_file_ext='',
+                   post_proc=None):
+
+    out_files = {}
+    out_groups = {}
+
+    test_id_arr = test_id.split(';')
+
+    group = 1
+    for test_id in test_id_arr:
+
+    # first process qdisc files
+    qdisc_files = get_testid_file_list('', test_id,
+                                       'qdisc_stats.log.gz', '', no_abort=True)
+
+    for qdisc_file in qdisc_files:
+        # get input directory name and create result directory if necessary
+        out_dirname = get_out_dir(qdisc_file, out_dir)
+
+        host = local(
+                'echo %s | sed "s/.*_\([a-z0-9\.]*\)_qdisc_stats.log.gz/\\1/"' %
+                qdisc_file,
+                capture=True)
+
+        out = out_dirname + test_id + '_' + host + '_qdisc.' + out_file_ext
+        if replot_only == '0' or not os.path.isfile(out) :
+            local('zcat %s | awk -F',' '{print $1,%2}'> %s' % (qdisc_file, out))
+
+        if post_proc is not None:
+            post_proc(qdisc_file, out)
+
+        out_files[long_flow_name] = out
+        out_groups[out] = group
+
+        group += 1
+
+    return (out_files, out_groups)
+
+
+## Extract qdisc stats over time
+## The extracted files have an extension of .qlen|.qdelay.
+##The format is CSV with the columns:
+## 1. Timestamp RTT measured (seconds.microseconds)
+## 2. QLEN | QDELAY
+#  @param test_id Test ID prefix of experiment to analyse
+#  @param out_dir Output directory for results
+#  @param replot_only Don't extract data again that is extracted already
+#  @return Test ID list, map of flow names to interim data file names and
+#          map of file names and group IDs
+def _extract_qdisc(test_id='', out_dir='', replot_only='0'):
+    "Extract QDISC stats over time"
+
+    test_id_arr = test_id.split(';')
+    if len(test_id_arr) == 0 or test_id_arr[0] == '':
+        abort('Must specify test_id parameter')
+
+    (files1,
+     groups1) = extract_qlen(test_id,
+                             out_dir,
+                             replot_only,
+                             'qlen',
+                             post_proc_qdisc,
+                             )
+    (files2,
+     groups2) = extract_qdelay(test_id,
+                               out_dir,
+                               replot_only,
+                               'qdelay',
+                               post_proc_qdisc,
+                               )
+
+    all_files = dict(files1.items() + files2.items())
+    all_groups = dict(groups1.items() + groups2.items())
+
+    return (test_id_arr, all_files, all_groups)
+
+
+## Extract qdisc stats over time
+## SEE _extract_qdisc
+@task
+def extract_qdisc(test_id='', out_dir='', replot_only='0'):
+    "Extract QDISC stats over time"
+
+    _extract_qdisc(test_id, out_dir, replot_only)
+
+    # done
+    puts('\n[MAIN] COMPLETED extracting QDISC %s \n' % test_id)
+
+
+## Analyse qdisc stats over time
+#  @param test_id Test ID prefix of experiment to analyse
+#  @param out_dir Output directory for results
+#  @param replot_only Don't extract data again, just redo the plot
+#  @param source_filter Filter on specific sources
+#  @param min_values Minimum number of data points in file, if fewer points
+#                    the file is ignored
+#  @param omit_const '0' don't omit anything,
+#                    '1' omit any series that are 100% constant
+#                        (e.g. because there was no data flow)
+#  @param ymin Minimum value on y-axis
+#  @param ymax Maximum value on y-axis
+#  @param lnames Semicolon-separated list of legend names
+#  @param stime Start time of plot window in seconds
+#               (by default 0.0 = start of experiment)
+#  @param etime End time of plot window in seconds
+#               (by default 0.0 = end of experiment)
+#  @param out_name Name prefix for resulting pdf file
+#  @param pdf_dir Output directory for pdf files (graphs), if not specified it is
+#                 the same as out_dir
+#  @param ts_correct '0' use timestamps as they are (default)
+#                    '1' correct timestamps based on clock offsets estimated
+#                        from broadcast pings
+#  @param io_filter  'i' only use statistics from incoming packets
+#                    'o' only use statistics from outgoing packets
+#                    'io' use statistics from incooming and outgoing packets
+#                    (only effective for SIFTR files)
+#  @param plot_params Set env parameters for plotting
+#  @param plot_script specify the script used for plotting, must specify full path
+@task
+def analyse_qdisc(test_id='', out_dir='', replot_only='0', source_filter='',
+                  min_values='3', omit_const='0', ymin='0', ymax='0', lnames='',
+                  stime='0.0', etime='0.0', out_name='', pdf_dir='',
+                  plot_params='', plot_script=''):
+    "Plot QDISC over time"
+
+    (test_id_arr,
+     out_files,
+     out_groups) = _extract_qdisc(test_id, out_dir, replot_only)
+
+    if len(out_files) > 0:
+        (out_files, out_groups) = filter_min_values(out_files, out_groups, min_values)
+        out_name = get_out_name(test_id_arr, out_name)
+        plot_time_series(out_name, out_files, 'Queue length (pkts)', 2, 0.001, 'pdf',
+                         out_name + '_qlen', pdf_dir=pdf_dir, sep=",",
+                         omit_const=omit_const, ymin=float(ymin), ymax=float(ymax),
+                         lnames=lnames, stime=stime, etime=etime, groups=out_groups,
+                         plot_params=plot_params, plot_script=plot_script,
+                         source_filter=source_filter)
+
+        plot_time_series(out_name, out_files, 'Queuing delay (ms)', 2, 0.001, 'pdf',
+                         out_name + '_qdelay', pdf_dir=pdf_dir, sep=",",
+                         omit_const=omit_const, ymin=float(ymin), ymax=float(ymax),
+                         lnames=lnames, stime=stime, etime=etime, groups=out_groups,
+                         plot_params=plot_params, plot_script=plot_script,
+                         source_filter=source_filter)
+    # done
+    puts('\n[MAIN] COMPLETED plotting QDISC stats %s \n' % out_name)
 
 
 ## SIFTR values are in units of tcp_rtt_scale*hz, so we need to convert to milliseconds
@@ -1591,184 +1804,6 @@ def analyse_tcp_stat(test_id='', out_dir='', replot_only='0', source_filter='',
     # done
     puts('\n[MAIN] COMPLETED plotting TCP Statistic %s \n' % out_name)
 
-################################################################################
-
-## Extract some TCP statistic (based on siftr/web10g/ttprobe output)
-## The extracted files have an extension of .tcpstat_<num>, where <num> is the index
-## of the statistic. The format is CSV with the columns:
-## 1. Timestamp RTT measured (seconds.microseconds)
-## 2. TCP statistic chosen
-#  @param test_id Test ID prefix of experiment to analyse
-#  @param out_dir Output directory for results
-#  @param replot_only Don't extract data again that is already extracted
-#  @param source_filter Filter on specific sources
-#  @param siftr_index Integer number of the column in siftr log files
-#                     (note if you have sitfr and web10g logs, you must also
-#                     specify web10g_index) (default = 9, CWND)
-#  @param web10g_index Integer number of the column in web10g log files (note if
-#                      you have web10g and siftr logs, you must also specify siftr_index)
-#                      (default = 26, CWND)
-#                      example: analyse_tcp_stat(siftr_index=17,web10_index=23,...)
-#                      would plot smoothed RTT estimates.
-#  @param ttprobe_index Integer number of the column in ttprobe log files
-#                     (note if you have ttprobe, sitfr and web10g logs, you must also
-#                     specify sitfr_index and web10g_index) (default = 10, CWND)
-#  @param ts_correct '0' use timestamps as they are (default)
-#                    '1' correct timestamps based on clock offsets estimated
-#                        from broadcast pings
-#  @param io_filter  'i' only use statistics from incoming packets
-#                    'o' only use statistics from outgoing packets
-#                    'io' use statistics from incooming and outgoing packets
-#                    (only effective for SIFTR files)
-#  @return Test ID list, map of flow names to interim data file names and
-#          map of file names and group IDs
-def _extract_tcp_stat(test_id='', out_dir='', replot_only='0', source_filter='',
-                     siftr_index='9', web10g_index='26', ttprobe_index='10',
-                      ts_correct='1', io_filter='o'):
-    "Extract TCP Statistic"
-
-    test_id_arr = test_id.split(';')
-    if len(test_id_arr) == 0 or test_id_arr[0] == '':
-        abort('Must specify test_id parameter')
-
-    # output smoothed rtt and improved sample rtt (patched siftr required),
-    # post process to get rtt in milliseconds
-    (files1,
-     groups1) = extract_siftr(test_id,
-                              out_dir,
-                              replot_only,
-                              source_filter,
-                              siftr_index,
-                              'tcpstat_' + siftr_index,
-                              ts_correct=ts_correct,
-                              io_filter=io_filter)
-
-    # output smoothed RTT and sample RTT in milliseconds
-    (files2,
-     groups2) = extract_web10g(test_id,
-                               out_dir,
-                               replot_only,
-                               source_filter,
-                               web10g_index,
-                               'tcpstat_' + web10g_index,
-                               ts_correct=ts_correct)
-
-    (files3,
-     groups3) = extract_ttprobe(test_id,
-                               out_dir,
-                               replot_only,
-                               source_filter,
-                               ttprobe_index,
-                               'tcpstat_' + ttprobe_index,
-                               ts_correct=ts_correct,
-                               io_filter=io_filter)
-
-    # to deal with two Linux loggers for same experiments i.e. 'TPCONF_linux_tcp_logger = 'both'
-    inters = list(set(files2).intersection(files3))
-    if inters is not None:
-        try:
-            logger = os.environ['LINUX_TCP_LOGGER']
-        except:
-            logger = ''
-        for i in inters:
-            if logger == 'ttprobe':
-                del files2[i]
-            elif logger == 'web10g':
-                del files3[i]
-            else:
-                files2['w' + i] = files2.pop(i)
-
-    all_files = dict(files1.items() + files2.items() + files3.items())
-    all_groups = dict(groups1.items() + groups2.items() + groups3.items())
-
-    return (test_id_arr, all_files, all_groups)
-
-
-## Extract some TCP statistic (based on siftr/web10g/ttprobe output)
-## SEE _extract_tcp_stat
-@task
-def extract_tcp_stat(test_id='', out_dir='', replot_only='0', source_filter='',
-                     siftr_index='9', web10g_index='26', ttprobe_index='10',
-                     ts_correct='1', io_filter='o'):
-    "Extract TCP Statistic"
-
-    _extract_tcp_stat(test_id, out_dir, replot_only, source_filter,
-                      siftr_index, web10g_index, ttprobe_index,
-                      ts_correct, io_filter)
-
-    # done
-    puts('\n[MAIN] COMPLETED extracting TCP Statistic %s \n' % test_id)
-
-
-## Plot some TCP statistic (based on siftr/web10g/ttprobe output)
-#  @param test_id Test ID prefix of experiment to analyse
-#  @param out_dir Output directory for results
-#  @param replot_only Don't extract data again, just redo the plot
-#  @param source_filter Filter on specific sources
-#  @param min_values Minimum number of data points in file, if fewer points
-#                    the file is ignored
-#  @param omit_const '0' don't omit anything,
-#                    '1' omit any Series that are 100% constant
-#                        (e.g. because there was no data flow)
-#  @param siftr_index Integer number of the column in siftr log files
-#                     (note if you have sitfr and web10g logs, you must also
-#                     specify web10g_index) (default = 9, CWND)
-#  @param web10g_index Integer number of the column in web10g log files (note if
-#                      you have web10g and siftr logs, you must also specify siftr_index)
-#                      (default = 26, CWND)
-#		       example: analyse_tcp_stat(siftr_index=17,web10_index=23,...)
-#                      would plot smoothed RTT estimates.
-#  @param ttprobe_index Integer number of the column in ttprobe log files
-#                     (note if you have ttprobe, sitfr and web10g logs, you must also
-#                     specify sitfr_index and web10g_index) (default = 10, CWND)
-#  @param ylabel Label for y-axis in plot
-#  @param yscaler Scaler for y-axis values (must be a floating point number)
-#  @param ymin Minimum value on y-axis
-#  @param ymax Maximum value on y-axis
-#  @param lnames Semicolon-separated list of legend names
-#  @param stime Start time of plot window in seconds (by default 0.0 = start of experiment)
-#  @param etime End time of plot window in seconds (by default 0.0 = end of experiment)
-#  @param out_name Name prefix for resulting pdf file
-#  @param pdf_dir Output directory for pdf files (graphs), if not specified it is
-#                 the same as out_dir
-#  @param ts_correct '0' use timestamps as they are (default)
-#                    '1' correct timestamps based on clock offsets estimated
-#                        from broadcast pings
-#  @param io_filter  'i' only use statistics from incoming packets
-#                    'o' only use statistics from outgoing packets
-#                    'io' use statistics from incooming and outgoing packets
-#                    (only effective for SIFTR files)
-#  @param plot_params Set env parameters for plotting
-#  @param plot_script Specify the script used for plotting, must specify full path
-@task
-def analyse_tcp_stat(test_id='', out_dir='', replot_only='0', source_filter='',
-                     min_values='3', omit_const='0', siftr_index='9', web10g_index='26',
-                     ttprobe_index='10',
-                     ylabel='', yscaler='1.0', ymin='0', ymax='0', lnames='',
-                     stime='0.0', etime='0.0', out_name='', pdf_dir='', ts_correct='1',
-                     io_filter='o', plot_params='', plot_script=''):
-    "Compute TCP Statistic"
-
-    (test_id_arr,
-     out_files,
-     out_groups) =_extract_tcp_stat(test_id, out_dir, replot_only, source_filter,
-                      siftr_index, web10g_index, ttprobe_index, ts_correct, io_filter)
-
-    if len(out_files) > 0:
-        (out_files, out_groups) = filter_min_values(out_files, out_groups, min_values)
-        out_name = get_out_name(test_id_arr, out_name)
-        plot_time_series(out_name, out_files, ylabel, 2, float(yscaler), 'pdf',
-                         out_name + '_tcpstat_' +
-                         siftr_index + '_' + web10g_index + '_' + ttprobe_index,
-                         pdf_dir=pdf_dir, sep=",", omit_const=omit_const,
-                         ymin=float(ymin), ymax=float(ymax), lnames=lnames, stime=stime,
-                         etime=etime, groups=out_groups, plot_params=plot_params,
-                         plot_script=plot_script, source_filter=source_filter)
-
-    # done
-    puts('\n[MAIN] COMPLETED plotting TCP Statistic %s \n' % out_name)
-
-################################################################################
 
 ## Extract packet sizes. Plot function computes throughput based on the packet sizes.
 ## The extracted files have an extension of .psiz. The format is CSV with the
@@ -2077,6 +2112,10 @@ def extract_all(exp_list='experiments_completed.txt', test_id='', out_dir='',
                     ts_correct=ts_correct)
             execute(extract_cwnd, test_id, out_dir, replot_only, source_filter,
                     ts_correct=ts_correct, io_filter=io_filter)
+            execute(extract_qlen, test_id, out_dir, replot_only, source_filter,
+                    ts_correct=ts_correct, io_filter=io_filter)
+            execute(extract_qdelay, test_id, out_dir, replot_only, source_filter,
+                    ts_correct=ts_correct, io_filter=io_filter)
             execute(extract_tcp_rtt, test_id, out_dir, replot_only, source_filter,
                     ts_correct=ts_correct, io_filter=io_filter, web10g_version=web10g_version)
             execute(extract_pktsizes, test_id, out_dir, replot_only, source_filter,
@@ -2143,6 +2182,10 @@ def analyse_all(exp_list='experiments_completed.txt', test_id='', out_dir='',
                     etime=etime, out_name=out_name, pdf_dir=pdf_dir,
                     ts_correct=ts_correct, plot_params=plot_params, plot_script=plot_script)
             execute(analyse_cwnd, test_id, out_dir, replot_only, source_filter, min_values,
+                    omit_const=omit_const, lnames=lnames, stime=stime, etime=etime,
+                    out_name=out_name, pdf_dir=pdf_dir, ts_correct=ts_correct,
+                    io_filter=io_filter, plot_params=plot_params, plot_script=plot_script)
+            execute(analyse_qdisc, test_id, out_dir, replot_only, source_filter, min_values,
                     omit_const=omit_const, lnames=lnames, stime=stime, etime=etime,
                     out_name=out_name, pdf_dir=pdf_dir, ts_correct=ts_correct,
                     io_filter=io_filter, plot_params=plot_params, plot_script=plot_script)
@@ -3277,7 +3320,7 @@ def _extract_incast_iqtimes(test_id='', out_dir='', replot_only='0', source_filt
                         responders = {}
                         cum_time = {}
 
-		        with open(out1) as f:
+                        with open(out1) as f:
                             lines = f.readlines()
                             for line in lines:
                                 fields = line.split()
@@ -3569,7 +3612,7 @@ def _extract_incast_restimes(test_id='', out_dir='', replot_only='0', source_fil
                                 fields = line.split()
                                 if cnt % 2 == 0:
                                     # request
-			            req_time = float(line.split()[0])
+                                    req_time = float(line.split()[0])
                                 elif fields[1] != last_src:
                                     # response, unless the source is the same as for the last packet
                                     # (then we possibly have no response)
