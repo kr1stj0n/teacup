@@ -1398,9 +1398,10 @@ def extract_qdisc(test_id='', out_dir='', replot_only='0'):
 #  @param plot_script specify the script used for plotting, must specify full path
 @task
 def analyse_qdisc(test_id='', out_dir='', replot_only='0', source_filter='',
-                  min_values='3', omit_const='0', ymin='0', ymax='0', lnames='',
-                  stime='0.0', etime='0.0', out_name='', pdf_dir='',
-                  plot_params='', plot_script=''):
+                 min_values='3', omit_const='0', ymin='0', ymax='0', lnames='',
+                 stime='0.0', etime='0.0', out_name='', pdf_dir='', io_filter='o',
+                 plot_params='', plot_script=''):
+
     "Plot QDISC over time"
 
     (test_id_arr,
@@ -2153,7 +2154,7 @@ def analyse_all(exp_list='experiments_completed.txt', test_id='', out_dir='',
                 smoothed='1', resume_id='', lnames='', link_len='0', stime='0.0',
                 etime='0.0', out_name='', pdf_dir='', ts_correct='1',
                 io_filter='o', web10g_version='2.0.9', plot_params='', plot_script=''):
-    "Compute SPP RTT, TCP RTT, CWND, queue and throughput statistics"
+    "Compute SPP RTT, TCP RTT, CWND, QDISC and throughput statistics"
 
     experiments = get_experiment_list(exp_list, test_id)
 
@@ -2169,26 +2170,31 @@ def analyse_all(exp_list='experiments_completed.txt', test_id='', out_dir='',
 
         if do_analyse:
             execute(analyse_rtt, test_id, out_dir, replot_only, source_filter,
+                    min_values, omit_const=omit_const, lnames=lnames,
+                    stime=stime, etime=etime, out_name=out_name, pdf_dir=pdf_dir,
+                    ts_correct=ts_correct, plot_params=plot_params,
+                    plot_script=plot_script)
+            execute(analyse_cwnd, test_id, out_dir, replot_only, source_filter,
                     min_values, omit_const=omit_const, lnames=lnames, stime=stime,
                     etime=etime, out_name=out_name, pdf_dir=pdf_dir,
-                    ts_correct=ts_correct, plot_params=plot_params, plot_script=plot_script)
-            execute(analyse_cwnd, test_id, out_dir, replot_only, source_filter, min_values,
-                    omit_const=omit_const, lnames=lnames, stime=stime, etime=etime,
-                    out_name=out_name, pdf_dir=pdf_dir, ts_correct=ts_correct,
-                    io_filter=io_filter, plot_params=plot_params, plot_script=plot_script)
-            execute(analyse_qdisc, test_id, out_dir, replot_only, source_filter, min_values,
-                    omit_const=omit_const, lnames=lnames, stime=stime, etime=etime,
-                    out_name=out_name, pdf_dir=pdf_dir, ts_correct=ts_correct,
-                    io_filter=io_filter, plot_params=plot_params, plot_script=plot_script)
-            execute(analyse_tcp_rtt, test_id, out_dir, replot_only, source_filter, min_values,
-                    omit_const=omit_const, smoothed=smoothed, lnames=lnames,
-                    stime=stime, etime=etime, out_name=out_name, pdf_dir=pdf_dir,
-                    ts_correct=ts_correct, io_filter=io_filter, web10g_version=web10g_version,
+                    ts_correct=ts_correct, io_filter=io_filter,
                     plot_params=plot_params, plot_script=plot_script)
-            execute(analyse_throughput, test_id, out_dir, replot_only, source_filter,
-                    min_values, omit_const=omit_const, lnames=lnames, link_len=link_len,
-                    stime=stime, etime=etime, out_name=out_name, pdf_dir=pdf_dir,
-                    ts_correct=ts_correct, plot_params=plot_params, plot_script=plot_script)
+            execute(analyse_qdisc, test_id, out_dir, replot_only, source_filter,
+                    min_values, omit_const=omit_const, lnames=lnames, stime=stime,
+                    etime=etime, out_name=out_name, pdf_dir=pdf_dir,
+                    io_filter=io_filter, plot_params=plot_params,
+                    plot_script=plot_script)
+            execute(analyse_tcp_rtt, test_id, out_dir, replot_only, source_filter,
+                    min_values, omit_const=omit_const, smoothed=smoothed,
+                    lnames=lnames, stime=stime, etime=etime, out_name=out_name,
+                    pdf_dir=pdf_dir, ts_correct=ts_correct, io_filter=io_filter,
+                    web10g_version=web10g_version, plot_params=plot_params,
+                    plot_script=plot_script)
+            execute(analyse_throughput, test_id, out_dir, replot_only,
+                    source_filter, min_values, omit_const=omit_const, lnames=lnames,
+                    link_len=link_len, stime=stime, etime=etime, out_name=out_name,
+                    pdf_dir=pdf_dir, ts_correct=ts_correct, plot_params=plot_params,
+                    plot_script=plot_script)
 
 
 ## Extract incast response times from httperf files
