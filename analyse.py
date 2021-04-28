@@ -2106,8 +2106,7 @@ def extract_all(exp_list='experiments_completed.txt', test_id='', out_dir='',
                     ts_correct=ts_correct)
             execute(extract_cwnd, test_id, out_dir, replot_only, source_filter,
                     ts_correct=ts_correct, io_filter=io_filter)
-            execute(extract_qlen, test_id, out_dir, replot_only)
-            execute(extract_qdelay, test_id, out_dir, replot_only)
+            execute(extract_qdisc, test_id, out_dir, replot_only)
             execute(extract_tcp_rtt, test_id, out_dir, replot_only, source_filter,
                     ts_correct=ts_correct, io_filter=io_filter, web10g_version=web10g_version)
             execute(extract_pktsizes, test_id, out_dir, replot_only, source_filter,
