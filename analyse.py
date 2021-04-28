@@ -1249,27 +1249,27 @@ def extract_qdelay(test_id='', out_dir='', replot_only='0', out_file_ext='',
     group = 1
     for test_id in test_id_arr:
 
-    # first process qdisc files
-    qdisc_files = get_testid_file_list('', test_id,
+        # first process qdisc files
+        qdisc_files = get_testid_file_list('', test_id,
                                        'qdisc_stats.log.gz', '', no_abort=True)
 
-    for qdisc_file in qdisc_files:
-        # get input directory name and create result directory if necessary
-        out_dirname = get_out_dir(qdisc_file, out_dir)
-        host = local(
+        for qdisc_file in qdisc_files:
+            # get input directory name and create result directory if necessary
+            out_dirname = get_out_dir(qdisc_file, out_dir)
+            host = local(
                 'echo %s | sed "s/.*_\([a-z0-9\.]*\)_qdisc_stats.log.gz/\\1/"' %
                 qdisc_file,
                 capture=True)
 
-        out = out_dirname + test_id + '_' + host + '_qdisc.' + out_file_ext
-        if replot_only == '0' or not os.path.isfile(out) :
-            local('zcat %s | awk -F',' '{print $1,%3}'> %s' % (qdisc_file, out))
+            out = out_dirname + test_id + '_' + host + '_qdisc.' + out_file_ext
+            if replot_only == '0' or not os.path.isfile(out) :
+                local('zcat %s | awk -F',' '{print $1,%3}'> %s' % (qdisc_file, out))
 
-        if post_proc is not None:
-            post_proc(qdisc_file, out)
+            if post_proc is not None:
+                post_proc(qdisc_file, out)
 
-        out_files[long_flow_name] = out
-        out_groups[out] = group
+            out_files[host] = out
+            out_groups[out] = group
 
         group += 1
 
@@ -1295,28 +1295,28 @@ def extract_qdelay(test_id='', out_dir='', replot_only='0', out_file_ext='',
     group = 1
     for test_id in test_id_arr:
 
-    # first process qdisc files
-    qdisc_files = get_testid_file_list('', test_id,
+        # first process qdisc files
+        qdisc_files = get_testid_file_list('', test_id,
                                        'qdisc_stats.log.gz', '', no_abort=True)
 
-    for qdisc_file in qdisc_files:
-        # get input directory name and create result directory if necessary
-        out_dirname = get_out_dir(qdisc_file, out_dir)
+        for qdisc_file in qdisc_files:
+            # get input directory name and create result directory if necessary
+            out_dirname = get_out_dir(qdisc_file, out_dir)
 
-        host = local(
+            host = local(
                 'echo %s | sed "s/.*_\([a-z0-9\.]*\)_qdisc_stats.log.gz/\\1/"' %
                 qdisc_file,
                 capture=True)
 
-        out = out_dirname + test_id + '_' + host + '_qdisc.' + out_file_ext
-        if replot_only == '0' or not os.path.isfile(out) :
-            local('zcat %s | awk -F',' '{print $1,%2}'> %s' % (qdisc_file, out))
+            out = out_dirname + test_id + '_' + host + '_qdisc.' + out_file_ext
+            if replot_only == '0' or not os.path.isfile(out) :
+                local('zcat %s | awk -F',' '{print $1,%2}'> %s' % (qdisc_file, out))
 
-        if post_proc is not None:
-            post_proc(qdisc_file, out)
+            if post_proc is not None:
+                post_proc(qdisc_file, out)
 
-        out_files[long_flow_name] = out
-        out_groups[out] = group
+            out_files[host] = out
+            out_groups[out] = group
 
         group += 1
 
@@ -1341,19 +1341,11 @@ def _extract_qdisc(test_id='', out_dir='', replot_only='0'):
         abort('Must specify test_id parameter')
 
     (files1,
-     groups1) = extract_qlen(test_id,
-                             out_dir,
-                             replot_only,
-                             'qlen',
-                             post_proc_qdisc,
-                             )
+     groups1) = extract_qlen(test_id, out_dir, replot_only, 'qlen',
+                             post_proc_qdisc)
     (files2,
-     groups2) = extract_qdelay(test_id,
-                               out_dir,
-                               replot_only,
-                               'qdelay',
-                               post_proc_qdisc,
-                               )
+     groups2) = extract_qdelay(test_id, out_dir, replot_only, 'qdelay',
+                               post_proc_qdisc)
 
     all_files = dict(files1.items() + files2.items())
     all_groups = dict(groups1.items() + groups2.items())
