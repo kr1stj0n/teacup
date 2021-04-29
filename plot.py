@@ -37,6 +37,12 @@ import datetime
 from fabric.api import task, warn, put, puts, get, local, run, execute, \
     settings, abort, hosts, env, runs_once, parallel, hide
 
+import numpy as np
+import pandas as pd
+import matplotlib.pyplot as plt
+import seaborn as sns
+sns.set()
+
 import config
 from internalutil import mkdir_p, valid_dir
 
@@ -776,3 +782,24 @@ def plot_2d_density(title='', x_files=[], y_files=[], xlab='', ylab='', yindexes
     if config.TPCONF_debug_level == 0:
         local('rm -f %s%s_plot_contour.Rout' % (pdf_dir, oprefix))
 
+
+def plot_qdisc_stats(fname='', which='', yaxis='', out_dir='', out_file=''):
+
+    df = pd.read_csv(out_dir + fname, skiprows=1)
+    df.columns = ['Timestamp', which]
+
+    df.Timestamp = pd.to_datetime(df.Timestamp, unit='ms')
+    df.set_index('Timestamp', inplace=True)
+
+    df.plot(figsize=(20,10), linewidth=1, fontsize=20)
+    plt.xlabel('Time (s)', fontsize=20)
+    plt.ylabel(yaxis, fontsize=20)
+
+    plt.legend(fontsize=20, loc='best')
+    plt.margins(x=0.02)
+    plt.tight_layout(pad=0.4, w_pad=0.5, h_pad=1.0)
+    plt.savefig(out_dir + out_file,
+                format='eps',
+                dpi=1200,
+                bbox_inches='tight',
+                pad_inches=0.025)

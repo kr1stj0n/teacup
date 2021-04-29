@@ -46,7 +46,8 @@ from flowcache import append_flow_cache, lookup_flow_cache
 from sourcefilter import SourceFilter
 from analyseutil import get_out_dir, get_out_name, filter_min_values, \
     select_bursts, get_address_pair_analysis
-from plot import plot_time_series, plot_dash_goodput, plot_incast_ACK_series
+from plot import plot_time_series, plot_dash_goodput, plot_incast_ACK_series,
+    plot_qdisc_stats
 
 import gzip
 import socket
@@ -1239,14 +1240,11 @@ def post_proc_qdisc(qdisc_file, out_file):
 #  @return Map of flow names to interim data file names and
 #          map of file names and group IDs
 def extract_qdelay(test_id='', out_dir='', replot_only='0', out_file_ext='',
-                   post_proc=None):
+                   post_proc=None, ts_correct='1'):
 
     out_files = {}
-    out_groups = {}
-
     test_id_arr = test_id.split(';')
 
-    group = 1
     for test_id in test_id_arr:
 
         # first process qdisc files
@@ -1261,6 +1259,7 @@ def extract_qdelay(test_id='', out_dir='', replot_only='0', out_file_ext='',
                 qdisc_file,
                 capture=True)
 
+            host = host + '_qdisc_qdelay'
             out = out_dirname + test_id + '_' + host + '_qdisc.' + out_file_ext
             if replot_only == '0' or not os.path.isfile(out) :
                 local('zcat %s | awk -F\',\' \'{print $1","$3}\' > %s' %
@@ -1269,12 +1268,11 @@ def extract_qdelay(test_id='', out_dir='', replot_only='0', out_file_ext='',
             if post_proc is not None:
                 post_proc(qdisc_file, out)
 
+            if ts_correct == '1':
+                    out = adjust_timestamps(test_id, out, host, ',', out_dir)
             out_files[host] = out
-            out_groups[out] = group
 
-        group += 1
-
-    return (out_files, out_groups)
+    return out_files
 
 
 ## Extract qdelay from qdisc stats files
@@ -1286,14 +1284,11 @@ def extract_qdelay(test_id='', out_dir='', replot_only='0', out_file_ext='',
 #  @return Map of flow names to interim data file names and
 #          map of file names and group IDs
 def extract_qlen(test_id='', out_dir='', replot_only='0', out_file_ext='',
-                 post_proc=None):
+                 post_proc=None, ts_correct='1'):
 
     out_files = {}
-    out_groups = {}
-
     test_id_arr = test_id.split(';')
 
-    group = 1
     for test_id in test_id_arr:
 
         # first process qdisc files
@@ -1308,7 +1303,7 @@ def extract_qlen(test_id='', out_dir='', replot_only='0', out_file_ext='',
                 'echo %s | sed "s/.*_\([a-z0-9\.]*\)_qdisc_stats.log.gz/\\1/"' %
                 qdisc_file,
                 capture=True)
-
+            host = host + '_qdisc_qlen'
             out = out_dirname + test_id + '_' + host + '_qdisc.' + out_file_ext
             if replot_only == '0' or not os.path.isfile(out) :
                 local('zcat %s | awk -F\',\' \'{print $1","$2}\' > %s' %
@@ -1317,12 +1312,11 @@ def extract_qlen(test_id='', out_dir='', replot_only='0', out_file_ext='',
             if post_proc is not None:
                 post_proc(qdisc_file, out)
 
+            if ts_correct == '1':
+                    out = adjust_timestamps(test_id, out, host, ',', out_dir)
             out_files[host] = out
-            out_groups[out] = group
 
-        group += 1
-
-    return (out_files, out_groups)
+    return out_files
 
 
 ## Extract qdisc stats over time
@@ -1335,36 +1329,33 @@ def extract_qlen(test_id='', out_dir='', replot_only='0', out_file_ext='',
 #  @param replot_only Don't extract data again that is extracted already
 #  @return Test ID list, map of flow names to interim data file names and
 #          map of file names and group IDs
-def _extract_qdisc(test_id='', out_dir='', replot_only='0'):
+def _extract_qdisc(test_id='', out_dir='', replot_only='0', ts_correct='1'):
     "Extract QDISC stats over time"
 
     test_id_arr = test_id.split(';')
     if len(test_id_arr) == 0 or test_id_arr[0] == '':
         abort('Must specify test_id parameter')
 
-    (files1,
-     groups1) = extract_qlen(test_id, out_dir, replot_only, 'qlen',
-                             post_proc_qdisc)
-    (files2,
-     groups2) = extract_qdelay(test_id, out_dir, replot_only, 'qdelay',
-                               post_proc_qdisc)
+    qlen_file = extract_qlen(test_id, out_dir, replot_only, 'qlen',
+                             post_proc_qdisc, ts_correct)
+    qdelay_file = extract_qdelay(test_id, out_dir, replot_only, 'qdelay',
+                                 post_proc_qdisc, ts_correct)
 
-    all_files = dict(files1.items() + files2.items())
-    all_groups = dict(groups1.items() + groups2.items())
+    all_files = dict(qlen_file.items() + qdelay_file.items())
 
-    return (test_id_arr, all_files, all_groups)
+    return (test_id_arr, all_files)
 
 
 ## Extract qdisc stats over time
 ## SEE _extract_qdisc
 @task
-def extract_qdisc(test_id='', out_dir='', replot_only='0'):
+def extract_qdisc(test_id='', out_dir='', replot_only='0', ts_correct='1'):
     "Extract QDISC stats over time"
 
-    _extract_qdisc(test_id, out_dir, replot_only)
+    _extract_qdisc(test_id, out_dir, replot_only, ts_correct)
 
     # done
-    puts('\n[MAIN] COMPLETED extracting QDISC %s \n' % test_id)
+    puts('\n[MAIN] COMPLETED extracting QDISC stats %s \n' % test_id)
 
 
 ## Analyse qdisc stats over time
@@ -1397,33 +1388,24 @@ def extract_qdisc(test_id='', out_dir='', replot_only='0'):
 #  @param plot_params Set env parameters for plotting
 #  @param plot_script specify the script used for plotting, must specify full path
 @task
-def analyse_qdisc(test_id='', out_dir='', replot_only='0', source_filter='',
-                 min_values='3', omit_const='0', ymin='0', ymax='0', lnames='',
-                 stime='0.0', etime='0.0', out_name='', pdf_dir='', io_filter='o',
-                 plot_params='', plot_script=''):
+def analyse_qdisc(test_id='', out_dir='', replot_only='0', out_name=''):
 
-    "Plot QDISC over time"
+    "Plot QDISC stats over time"
 
-    (test_id_arr,
-     out_files,
-     out_groups) = _extract_qdisc(test_id, out_dir, replot_only)
+    (test_id_arr, out_files) = _extract_qdisc(test_id, out_dir, replot_only)
 
     if len(out_files) > 0:
-        (out_files, out_groups) = filter_min_values(out_files, out_groups, min_values)
         out_name = get_out_name(test_id_arr, out_name)
-        plot_time_series(out_name, out_files, 'Queue length (pkts)', 2, 0.001, 'pdf',
-                         out_name + '_qlen', pdf_dir=pdf_dir, sep=",",
-                         omit_const=omit_const, ymin=float(ymin), ymax=float(ymax),
-                         lnames=lnames, stime=stime, etime=etime, groups=out_groups,
-                         plot_params=plot_params, plot_script=plot_script,
-                         source_filter=source_filter)
+        for x in out_files:
+            if '_qlen' in x:
+                yaxis = 'Queue size (pkts.)'
+                name = 'qlen'
+            elif '_qdelay' in x:
+                yaxis = 'Queuing delay (ms)'
+                name = 'qdelay'
+            plot_qdisc_stats(out_files[x], name, yaxis, out_dir=out_dir,
+                             out_name=out_name )
 
-        plot_time_series(out_name, out_files, 'Queuing delay (ms)', 2, 0.001, 'pdf',
-                         out_name + '_qdelay', pdf_dir=pdf_dir, sep=",",
-                         omit_const=omit_const, ymin=float(ymin), ymax=float(ymax),
-                         lnames=lnames, stime=stime, etime=etime, groups=out_groups,
-                         plot_params=plot_params, plot_script=plot_script,
-                         source_filter=source_filter)
     # done
     puts('\n[MAIN] COMPLETED plotting QDISC stats %s \n' % out_name)
 
@@ -2107,7 +2089,8 @@ def extract_all(exp_list='experiments_completed.txt', test_id='', out_dir='',
                     ts_correct=ts_correct)
             execute(extract_cwnd, test_id, out_dir, replot_only, source_filter,
                     ts_correct=ts_correct, io_filter=io_filter)
-            execute(extract_qdisc, test_id, out_dir, replot_only)
+            execute(extract_qdisc, test_id, out_dir, replot_only,
+                    ts_correct=ts_correct)
             execute(extract_tcp_rtt, test_id, out_dir, replot_only, source_filter,
                     ts_correct=ts_correct, io_filter=io_filter, web10g_version=web10g_version)
             execute(extract_pktsizes, test_id, out_dir, replot_only, source_filter,
@@ -2179,11 +2162,7 @@ def analyse_all(exp_list='experiments_completed.txt', test_id='', out_dir='',
                     etime=etime, out_name=out_name, pdf_dir=pdf_dir,
                     ts_correct=ts_correct, io_filter=io_filter,
                     plot_params=plot_params, plot_script=plot_script)
-            execute(analyse_qdisc, test_id, out_dir, replot_only, source_filter,
-                    min_values, omit_const=omit_const, lnames=lnames, stime=stime,
-                    etime=etime, out_name=out_name, pdf_dir=pdf_dir,
-                    io_filter=io_filter, plot_params=plot_params,
-                    plot_script=plot_script)
+            execute(analyse_qdisc, test_id, out_dir, replot_only, out_name=out_name)
             execute(analyse_tcp_rtt, test_id, out_dir, replot_only, source_filter,
                     min_values, omit_const=omit_const, smoothed=smoothed,
                     lnames=lnames, stime=stime, etime=etime, out_name=out_name,
