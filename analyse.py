@@ -1416,7 +1416,7 @@ def analyse_qdisc(test_id='', out_dir='', pdf_dir='', replot_only='0', out_name=
                 name = 'qdelay'
             plot_qdisc_stats(out_files[x], name, yaxis,
                              out_dir=out_dir,
-                             pdf_dir=pdf_dir,
+                             pdf_dir=test_id,
                              out_file=out_name + '_' + name)
 
     # done
