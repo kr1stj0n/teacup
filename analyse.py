@@ -1221,14 +1221,23 @@ def analyse_cwnd(test_id='', out_dir='', replot_only='0', source_filter='',
     puts('\n[MAIN] COMPLETED plotting CWND %s \n' % out_name)
 
 
-## Delete the last line
+## Adjust timestamps to match _cwnd file
 #  @param qdisc_file Data
 #  @param out_file File name for post processed data
-def post_proc_qdisc(qdisc_file, out_file):
+def post_proc_qdisc(test_id, qdisc_file, out_file):
+    cwnd_files = get_testid_file_list('', test_id,
+                                     '.cwnd', '', no_abort=True)
+    BEGIN_TS = local(
+            'cat %s | sed -n "1p" | awk -F\',\' \'{print $1}\'' %
+            cwnd_files[0])
+    END_TS = local(
+            'cat %s | sed -n "$p" | awk -F\',\' \'{print $1}\'' %
+            cwnd_files[0])
+
     tmp_file = local('mktemp "/tmp/tmp.XXXXXXXXXX"', capture=True)
     local(
-        'cat %s | sed -e "$ d" > %s && mv %s %s' %
-        (out_file, tmp_file, tmp_file, out_file))
+        'cat %s | awk \'$1 > %s && $1 < %s\' > %s && mv %s %s' %
+        (out_file, BEGIN_TS, END_TS, tmp_file, tmp_file, out_file))
 
 
 ## Extract qdelay from qdisc stats files
@@ -1266,7 +1275,7 @@ def extract_qdelay(test_id='', out_dir='', replot_only='0', out_file_ext='',
                         (qdisc_file, out))
 
             if post_proc is not None:
-                post_proc(qdisc_file, out)
+                post_proc(test_id, qdisc_file, out)
 
             if ts_correct == '1':
                 out = adjust_timestamps(test_id, out, host, ',', out_dir)
@@ -1310,7 +1319,7 @@ def extract_qlen(test_id='', out_dir='', replot_only='0', out_file_ext='',
                         (qdisc_file, out))
 
             if post_proc is not None:
-                post_proc(qdisc_file, out)
+                post_proc(test_id, qdisc_file, out)
 
             if ts_correct == '1':
                 out = adjust_timestamps(test_id, out, host, ',', out_dir)
