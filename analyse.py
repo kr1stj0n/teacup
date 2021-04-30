@@ -46,7 +46,7 @@ from flowcache import append_flow_cache, lookup_flow_cache
 from sourcefilter import SourceFilter
 from analyseutil import get_out_dir, get_out_name, filter_min_values, \
     select_bursts, get_address_pair_analysis
-from plot import plot_time_series, plot_dash_goodput, plot_incast_ACK_series,
+from plot import plot_time_series, plot_dash_goodput, plot_incast_ACK_series, \
     plot_qdisc_stats
 
 import gzip
@@ -1405,7 +1405,7 @@ def analyse_qdisc(test_id='', out_dir='', replot_only='0', out_name='',
                 yaxis = 'Queuing delay (ms)'
                 name = 'qdelay'
             plot_qdisc_stats(out_files[x], name, yaxis, out_dir=out_dir,
-                             out_name=out_name )
+                             out_file=out_name)
 
     # done
     puts('\n[MAIN] COMPLETED plotting QDISC stats %s \n' % out_name)
