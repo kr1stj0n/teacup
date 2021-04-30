@@ -1228,15 +1228,16 @@ def post_proc_qdisc(test_id, qdisc_file, out_file):
     cwnd_files = get_testid_file_list('', test_id,
                                      '.cwnd', '', no_abort=True)
     BEGIN_TS = local(
-            'cat %s | sed -n "1p" | awk -F\',\' \'{print $1}\'' %
-            cwnd_files[0])
+            'cat %s | sed -n \'1p\' | awk -F\',\' \'{print $1}\'' %
+            cwnd_files[0], capture=True)
     END_TS = local(
-            'cat %s | sed -n "$p" | awk -F\',\' \'{print $1}\'' %
-            cwnd_files[0])
+            'cat %s | sed -n \'$p\' | awk -F\',\' \'{print $1}\'' %
+            cwnd_files[0], capture=True)
 
+    print (BEGIN_TS + ' <o> ' + END_TS + '<o>' + cwnd_files[0])
     tmp_file = local('mktemp "/tmp/tmp.XXXXXXXXXX"', capture=True)
     local(
-        'cat %s | awk \'$1 > %s && $1 < %s\' > %s && mv %s %s' %
+        'cat %s | awk \'$1 > "%s" && $1 < "%s"\' > %s && mv %s %s' %
         (out_file, BEGIN_TS, END_TS, tmp_file, tmp_file, out_file))
 
 
@@ -1397,7 +1398,7 @@ def extract_qdisc(test_id='', out_dir='', replot_only='0', ts_correct='1'):
 #  @param plot_params Set env parameters for plotting
 #  @param plot_script specify the script used for plotting, must specify full path
 @task
-def analyse_qdisc(test_id='', out_dir='', replot_only='0', out_name='',
+def analyse_qdisc(test_id='', out_dir='', pdf_dir='', replot_only='0', out_name='',
                   ts_correct=''):
 
     "Plot QDISC stats over time"
@@ -1413,8 +1414,10 @@ def analyse_qdisc(test_id='', out_dir='', replot_only='0', out_name='',
             elif '_qdelay' in x:
                 yaxis = 'Queuing delay (ms)'
                 name = 'qdelay'
-            plot_qdisc_stats(out_files[x], name, yaxis, out_dir=out_dir,
-                             out_file=out_name)
+            plot_qdisc_stats(out_files[x], name, yaxis,
+                             out_dir=out_dir,
+                             pdf_dir=pdf_dir,
+                             out_file=out_name + '_' + name)
 
     # done
     puts('\n[MAIN] COMPLETED plotting QDISC stats %s \n' % out_name)
@@ -2172,8 +2175,8 @@ def analyse_all(exp_list='experiments_completed.txt', test_id='', out_dir='',
                     etime=etime, out_name=out_name, pdf_dir=pdf_dir,
                     ts_correct=ts_correct, io_filter=io_filter,
                     plot_params=plot_params, plot_script=plot_script)
-            execute(analyse_qdisc, test_id, out_dir, replot_only, out_name=out_name,
-                    ts_correct=ts_correct)
+            execute(analyse_qdisc, test_id, out_dir, pdf_dir, replot_only,
+                    out_name=out_name, ts_correct=ts_correct)
             execute(analyse_tcp_rtt, test_id, out_dir, replot_only, source_filter,
                     min_values, omit_const=omit_const, smoothed=smoothed,
                     lnames=lnames, stime=stime, etime=etime, out_name=out_name,

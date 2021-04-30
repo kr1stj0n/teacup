@@ -785,7 +785,8 @@ def plot_2d_density(title='', x_files=[], y_files=[], xlab='', ylab='', yindexes
         local('rm -f %s%s_plot_contour.Rout' % (pdf_dir, oprefix))
 
 
-def plot_qdisc_stats(fname='', which='', yaxis='', out_dir='', out_file=''):
+def plot_qdisc_stats(fname='', which='', yaxis='', out_dir='', pdf_dir='',
+                     out_file=''):
 
     df = pd.read_csv(out_dir + fname, skiprows=1)
     df.columns = ['Timestamp', which]
@@ -800,7 +801,7 @@ def plot_qdisc_stats(fname='', which='', yaxis='', out_dir='', out_file=''):
     plt.legend(fontsize=20, loc='best')
     plt.margins(x=0.02)
     plt.tight_layout(pad=0.4, w_pad=0.5, h_pad=1.0)
-    plt.savefig(out_dir + out_file,
+    plt.savefig(pdf_dir + '/' + out_file + '.eps',
                 format='eps',
                 dpi=1200,
                 bbox_inches='tight',
