@@ -1259,8 +1259,8 @@ def extract_qdelay(test_id='', out_dir='', replot_only='0', out_file_ext='',
                 qdisc_file,
                 capture=True)
 
-            host = host + '_qdisc_qdelay'
-            out = out_dirname + test_id + '_' + host + '_qdisc.' + out_file_ext
+            host_key = host + '_qdelay'
+            out = out_dirname + test_id + '_' + host_key + '_qdisc.' + out_file_ext
             if replot_only == '0' or not os.path.isfile(out) :
                 local('zcat %s | awk -F\',\' \'{print $1","$3}\' > %s' %
                         (qdisc_file, out))
@@ -1269,8 +1269,8 @@ def extract_qdelay(test_id='', out_dir='', replot_only='0', out_file_ext='',
                 post_proc(qdisc_file, out)
 
             if ts_correct == '1':
-                    out = adjust_timestamps(test_id, out, host, ',', out_dir)
-            out_files[host] = out
+                out = adjust_timestamps(test_id, out, host, ',', out_dir)
+            out_files[host_key] = out
 
     return out_files
 
@@ -1303,8 +1303,8 @@ def extract_qlen(test_id='', out_dir='', replot_only='0', out_file_ext='',
                 'echo %s | sed "s/.*_\([a-z0-9\.]*\)_qdisc_stats.log.gz/\\1/"' %
                 qdisc_file,
                 capture=True)
-            host = host + '_qdisc_qlen'
-            out = out_dirname + test_id + '_' + host + '_qdisc.' + out_file_ext
+            host_key = host + '_qlen'
+            out = out_dirname + test_id + '_' + host_key + '_qdisc.' + out_file_ext
             if replot_only == '0' or not os.path.isfile(out) :
                 local('zcat %s | awk -F\',\' \'{print $1","$2}\' > %s' %
                         (qdisc_file, out))
@@ -1313,8 +1313,8 @@ def extract_qlen(test_id='', out_dir='', replot_only='0', out_file_ext='',
                 post_proc(qdisc_file, out)
 
             if ts_correct == '1':
-                    out = adjust_timestamps(test_id, out, host, ',', out_dir)
-            out_files[host] = out
+                out = adjust_timestamps(test_id, out, host, ',', out_dir)
+            out_files[host_key] = out
 
     return out_files
 
@@ -1388,7 +1388,8 @@ def extract_qdisc(test_id='', out_dir='', replot_only='0', ts_correct='1'):
 #  @param plot_params Set env parameters for plotting
 #  @param plot_script specify the script used for plotting, must specify full path
 @task
-def analyse_qdisc(test_id='', out_dir='', replot_only='0', out_name=''):
+def analyse_qdisc(test_id='', out_dir='', replot_only='0', out_name='',
+                  ts_correct=''):
 
     "Plot QDISC stats over time"
 
@@ -2162,7 +2163,8 @@ def analyse_all(exp_list='experiments_completed.txt', test_id='', out_dir='',
                     etime=etime, out_name=out_name, pdf_dir=pdf_dir,
                     ts_correct=ts_correct, io_filter=io_filter,
                     plot_params=plot_params, plot_script=plot_script)
-            execute(analyse_qdisc, test_id, out_dir, replot_only, out_name=out_name)
+            execute(analyse_qdisc, test_id, out_dir, replot_only, out_name=out_name,
+                    ts_correct=ts_correct)
             execute(analyse_tcp_rtt, test_id, out_dir, replot_only, source_filter,
                     min_values, omit_const=omit_const, smoothed=smoothed,
                     lnames=lnames, stime=stime, etime=etime, out_name=out_name,
