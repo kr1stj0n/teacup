@@ -58,8 +58,9 @@ while [ 1 ] ; do
         QLEN=$(echo "$OUTPUT" | grep -Po 'backlog \K.*' | awk '{print ($2+0)}')
         echo -n "$QLEN," >> $LOG_FILE
 
-        QDELAY=$(echo "$OUTPUT" | grep -Po 'delay \K.*' | awk '{print ($1+0)}')
-        echo -n "$QDELAY" >> $LOG_FILE
+        QDELAY_US=$(echo "$OUTPUT" | grep -Po 'delay \K.*' | awk '{print ($1+0)}')
+        QDELAY_MS=$(echo "scale=6; $QDELAY_US / 1000" | bc)
+        echo -n "$QDELAY_MS" >> $LOG_FILE
         printf "\n" >> $LOG_FILE
 
 	AFTER=`date +%s.%N`
