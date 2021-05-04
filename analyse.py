@@ -1237,7 +1237,7 @@ def post_proc_qdisc(test_id, qdisc_file, out_file):
     tmp_file = local('mktemp "/tmp/tmp.XXXXXXXXXX"', capture=True)
     local(
         'awk \'$1 > "%s" {print f} {f=$0}\' %s > %s && mv %s %s' %
-        (out_file, BEGIN_TS, tmp_file, tmp_file, out_file))
+        (BEGIN_TS, out_file, tmp_file, tmp_file, out_file))
 
     tmp_file = local('mktemp "/tmp/tmp.XXXXXXXXXX"', capture=True)
     local(
