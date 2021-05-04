@@ -1234,12 +1234,15 @@ def post_proc_qdisc(test_id, qdisc_file, out_file):
             'cat %s | sed -n \'$p\' | awk -F\',\' \'{print $1}\'' %
             cwnd_files[0], capture=True)
 
-    print (BEGIN_TS + ' <o> ' + END_TS + '<o>' + cwnd_files[0])
     tmp_file = local('mktemp "/tmp/tmp.XXXXXXXXXX"', capture=True)
     local(
-        'cat %s | awk \'$1 > "%s" && $1 < "%s"\' > %s && mv %s %s' %
-        (out_file, BEGIN_TS, END_TS, tmp_file, tmp_file, out_file))
+        'awk \'$1 > "%s" {print f} {f=$0}\' %s > %s && mv %s %s' %
+        (out_file, BEGIN_TS, tmp_file, tmp_file, out_file))
 
+    tmp_file = local('mktemp "/tmp/tmp.XXXXXXXXXX"', capture=True)
+    local(
+        'cat %s | awk \'$1 < "%s"\' > %s && mv %s %s' %
+        (out_file, END_TS, tmp_file, tmp_file, out_file))
 
 ## Extract qdelay from qdisc stats files
 #  @param test_id Test ID prefix of experiment to analyse
