@@ -788,17 +788,23 @@ def plot_2d_density(title='', x_files=[], y_files=[], xlab='', ylab='', yindexes
 def plot_qdisc_stats(fname='', which='', yaxis='', out_dir='', pdf_dir='',
                      out_file=''):
 
-    df = pd.read_csv(out_dir + fname, skiprows=1)
-    df.columns = ['Timestamp', which]
+    # Read csv file
+    df = pd.read_csv(out_dir + fname, header=None, sep=',')
+    # Set as index the first column - Timestamps
+    df.set_index(0, inplace=True)
+    # Relative time - Start Time from 0
+    df.index = [idx - df.index[0] for idx in df.index]
 
-    df.Timestamp = pd.to_datetime(df.Timestamp, unit='ms')
-    df.set_index('Timestamp', inplace=True)
+    # Plot graph
+    ax = df.plot(figsize=(20,10), linewidth=1, fontsize=20, grid=True)
 
-    df.plot(figsize=(20,10), linewidth=1, fontsize=20)
-    plt.xlabel('Time (s)', fontsize=20)
-    plt.ylabel(yaxis, fontsize=20)
+    sns.set_style("ticks", {'grid.linestyle': '--'})
+    plt.locator_params(axis='x', nbins=10)
+    ax.set_xlabel('Time (s)', fontsize=20)
+    ax.set_ylabel(yaxis, fontsize=20)
 
-    plt.legend(fontsize=20, loc='best')
+    #plt.legend(fontsize=20, loc='best')
+    ax.get_legend().remove()
     plt.margins(x=0.02)
     plt.tight_layout(pad=0.4, w_pad=0.5, h_pad=1.0)
     plt.savefig(pdf_dir + '/' + out_file + '.eps',
