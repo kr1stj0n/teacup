@@ -639,7 +639,7 @@ def start_qdisc_logger(file_prefix='', remote_dir='', local_dir='.'):
         pass
 
     # run qdisc_logger.sh script
-    pid = runbg('qdisc_logger.sh %f %s %s %s' % (sample_interval, 'ifb1', 'pie',
+    pid = runbg('qdisc_logger.sh %f %s %s %s' % (sample_interval, 'ifb1', 'shq',
                                               logfile))
 
     bgproc.register_proc_later(
