@@ -798,7 +798,7 @@ def plot_qdisc_stats(fname='', which='', yaxis='', out_dir='', pdf_dir='',
     # Plot graph
     ax = df.plot(figsize=(20,10), linewidth=1, fontsize=20, grid=True)
 
-    sns.set_style("ticks", {'grid.linestyle': '--'})
+    # sns.set_style("ticks", {'grid.linestyle': '--'})
     plt.locator_params(axis='x', nbins=10)
     ax.set_xlabel('Time (s)', fontsize=20)
     ax.set_ylabel(yaxis, fontsize=20)

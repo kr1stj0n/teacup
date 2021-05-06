@@ -55,6 +55,9 @@ while [ 1 ] ; do
         OUTPUT="$(echo $CMD)"
 	echo -n "$BEFORE," >> $LOG_FILE
 
+        PROB=$(echo "$OUTPUT" | grep -Po 'probability \K.*' | awk '{print ($1+0)}')
+        echo -n "$PROB," >> $LOG_FILE
+
         QLEN=$(echo "$OUTPUT" | grep -Po 'backlog \K.*' | awk '{print ($2+0)}')
         echo -n "$QLEN," >> $LOG_FILE
 

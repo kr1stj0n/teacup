@@ -1244,12 +1244,63 @@ def post_proc_qdisc(test_id, qdisc_file, out_file):
         'cat %s | awk \'$1 < "%s"\' > %s && mv %s %s' %
         (out_file, END_TS, tmp_file, tmp_file, out_file))
 
+
+## Extract probability from qdisc stats files
+#  @param test_id Test ID prefix of experiment to analyse
+#  @param out_dir Output directory for results
+#  @param replot_only Don't extract data again, just redo the plot
+#  @param out_file_ext Extension for the output file containing the extracted data
+#  @param post_proc Name of function used for post-processing the extracted data
+#  @param ts_correct '0' use timestamps as they are (default)
+#                    '1' correct timestamps based on clock offsets estimated
+#                        from broadcast pings
+#  @return Map of flow names to interim data file names and
+#          map of file names and group IDs
+def extract_probability(test_id='', out_dir='', replot_only='0', out_file_ext='',
+                        post_proc=None, ts_correct='1'):
+
+    out_files = {}
+    test_id_arr = test_id.split(';')
+
+    for test_id in test_id_arr:
+
+        # first process qdisc files
+        qdisc_files = get_testid_file_list('', test_id,
+                                       'qdisc_stats.log.gz', '', no_abort=True)
+
+        for qdisc_file in qdisc_files:
+            # get input directory name and create result directory if necessary
+            out_dirname = get_out_dir(qdisc_file, out_dir)
+            host = local(
+                'echo %s | sed "s/.*_\([a-z0-9\.]*\)_qdisc_stats.log.gz/\\1/"' %
+                qdisc_file,
+                capture=True)
+
+            host_key = host + '_probability'
+            out = out_dirname + test_id + '_' + host_key + '_qdisc.' + out_file_ext
+            if replot_only == '0' or not os.path.isfile(out) :
+                local('zcat %s | awk -F\',\' \'{print $1","$2}\' > %s' %
+                        (qdisc_file, out))
+
+            if post_proc is not None:
+                post_proc(test_id, qdisc_file, out)
+
+            if ts_correct == '1':
+                out = adjust_timestamps(test_id, out, host, ',', out_dir)
+            out_files[host_key] = out
+
+    return out_files
+
+
 ## Extract qdelay from qdisc stats files
 #  @param test_id Test ID prefix of experiment to analyse
 #  @param out_dir Output directory for results
 #  @param replot_only Don't extract data again, just redo the plot
 #  @param out_file_ext Extension for the output file containing the extracted data
 #  @param post_proc Name of function used for post-processing the extracted data
+#  @param ts_correct '0' use timestamps as they are (default)
+#                    '1' correct timestamps based on clock offsets estimated
+#                        from broadcast pings
 #  @return Map of flow names to interim data file names and
 #          map of file names and group IDs
 def extract_qdelay(test_id='', out_dir='', replot_only='0', out_file_ext='',
@@ -1275,7 +1326,7 @@ def extract_qdelay(test_id='', out_dir='', replot_only='0', out_file_ext='',
             host_key = host + '_qdelay'
             out = out_dirname + test_id + '_' + host_key + '_qdisc.' + out_file_ext
             if replot_only == '0' or not os.path.isfile(out) :
-                local('zcat %s | awk -F\',\' \'{print $1","$3}\' > %s' %
+                local('zcat %s | awk -F\',\' \'{print $1","$4}\' > %s' %
                         (qdisc_file, out))
 
             if post_proc is not None:
@@ -1288,12 +1339,15 @@ def extract_qdelay(test_id='', out_dir='', replot_only='0', out_file_ext='',
     return out_files
 
 
-## Extract qdelay from qdisc stats files
+## Extract qlen from qdisc stats files
 #  @param test_id Test ID prefix of experiment to analyse
 #  @param out_dir Output directory for results
 #  @param replot_only Don't extract data again, just redo the plot
 #  @param out_file_ext Extension for the output file containing the extracted data
 #  @param post_proc Name of function used for post-processing the extracted data
+#  @param ts_correct '0' use timestamps as they are (default)
+#                    '1' correct timestamps based on clock offsets estimated
+#                        from broadcast pings
 #  @return Map of flow names to interim data file names and
 #          map of file names and group IDs
 def extract_qlen(test_id='', out_dir='', replot_only='0', out_file_ext='',
@@ -1319,7 +1373,7 @@ def extract_qlen(test_id='', out_dir='', replot_only='0', out_file_ext='',
             host_key = host + '_qlen'
             out = out_dirname + test_id + '_' + host_key + '_qdisc.' + out_file_ext
             if replot_only == '0' or not os.path.isfile(out) :
-                local('zcat %s | awk -F\',\' \'{print $1","$2}\' > %s' %
+                local('zcat %s | awk -F\',\' \'{print $1","$3}\' > %s' %
                         (qdisc_file, out))
 
             if post_proc is not None:
@@ -1349,12 +1403,14 @@ def _extract_qdisc(test_id='', out_dir='', replot_only='0', ts_correct='1'):
     if len(test_id_arr) == 0 or test_id_arr[0] == '':
         abort('Must specify test_id parameter')
 
+    prob_file = extract_probability(test_id, out_dir, replot_only, 'probability',
+                                    post_proc_qdisc, ts_correct)
     qlen_file = extract_qlen(test_id, out_dir, replot_only, 'qlen',
                              post_proc_qdisc, ts_correct)
     qdelay_file = extract_qdelay(test_id, out_dir, replot_only, 'qdelay',
                                  post_proc_qdisc, ts_correct)
 
-    all_files = dict(qlen_file.items() + qdelay_file.items())
+    all_files = dict(qlen_file.items() + qdelay_file.items() + prob_file.items())
 
     return (test_id_arr, all_files)
 
@@ -1417,6 +1473,9 @@ def analyse_qdisc(test_id='', out_dir='', pdf_dir='', replot_only='0', out_name=
             elif '_qdelay' in x:
                 yaxis = 'Queuing delay (ms)'
                 name = 'qdelay'
+            elif '_probability' in x:
+                yaxis = 'Probability'
+                name = 'probability'
             plot_qdisc_stats(out_files[x], name, yaxis,
                              out_dir=out_dir,
                              pdf_dir=test_id,
