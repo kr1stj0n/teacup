@@ -208,7 +208,9 @@ def start_iperf_server(counter='1', file_prefix='', remote_dir='', port='',
         iperf_cmd += ' -M %s' % mss
     if buf_size != '':
         # only for CAIA patched iperf
-        iperf_cmd += ' -j %s -k %s' % (buf_size, buf_size)
+        # Edit: updated for new iperf
+        # -N stands for NoDelay (Nagle)
+        iperf_cmd += ' -w %s -N' % buf_size
     if extra_params != '':
         iperf_cmd += ' ' + extra_params
     pid = runbg(iperf_cmd, wait, out_file=logfile)
@@ -275,14 +277,16 @@ def start_iperf_client(counter='1', file_prefix='', remote_dir='', port='',
     else:
         if bandw != '':
             # note that this option does not exist in older iperf versions!
-            iperf_cmd += ' -a %s' % bandw
+            iperf_cmd += ' -b %s' % bandw
         if congestion_algo != '':
             iperf_cmd += ' -Z %s' % congestion_algo
         if mss != '':
             iperf_cmd += ' -M %s' % mss
     if buf_size != '':
         # only for CAIA patched iperf
-        iperf_cmd += ' -j %s -k %s' % (buf_size, buf_size)
+        # Edit: updated for new iperf
+        # -N stands for NoDelay (Nagle)
+        iperf_cmd += ' -w %s -N' % buf_size
     if extra_params != '':
         iperf_cmd += ' ' + extra_params
     pid = runbg(iperf_cmd, wait, out_file=logfile)
