@@ -407,7 +407,7 @@ plot(curr_data[[1]][,1], curr_data[[1]][,2], type="l", pch=pchs[1], col=cols[1],
 
 if (length(curr_data) > 1) {
 	for (i in c(2:length(curr_data))) {
-		points(curr_data[[i]][,1], curr_data[[i]][,2], type="p", pch=pchs[i], col=cols[i],
+		points(curr_data[[i]][,1], curr_data[[i]][,2], type="l", pch=pchs[i], col=cols[i],
                	bg=cols[i], cex=cexs[i])
 	}
 }
