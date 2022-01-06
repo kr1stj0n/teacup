@@ -30,12 +30,12 @@
 # $Id: qdisc_logger.sh,v e7ea179b29d8 2021/04/27 04:28:23 kristjoc $
 
 if [ $# -lt 3 -o $# -gt 4 ] ; then
-        echo "Usage: $0 <interval> <iface> <qdisc ><log_file>"
-        echo "          <interval>      poll interval as fraction of seconds"
-        echo "          <iface>         router interface to collect stats from"
-        echo "          <qdisc>         qdisc scheduler type"
-        echo "          <log_file>      log file to write the data to"
-        exit 1
+    echo "Usage: $0 <interval> <iface> <qdisc ><log_file>"
+    echo "          <interval>      poll interval as fraction of seconds"
+    echo "          <iface>         router interface to collect stats from"
+    echo "          <qdisc>         qdisc scheduler type"
+    echo "          <log_file>      log file to write the data to"
+    exit 1
 fi
 
 # Poll interval in seconds
@@ -50,23 +50,23 @@ LOG_FILE=$4
 rm -f $LOG_FILE
 
 while [ 1 ] ; do
-        BEFORE=`date +%s.%N`
-        CMD=`tc -s qdisc show dev ${INTERFACE} | grep -Pzo '.*'${QDISC}'(.*\n)*'`
-        OUTPUT="$(echo $CMD)"
-	echo -n "$BEFORE," >> $LOG_FILE
+    BEFORE=`date +%s.%N`
+    CMD=`tc -s qdisc show dev ${INTERFACE} | grep -Pzo '.*'${QDISC}'(.*\n)*'`
+    OUTPUT="$(echo $CMD)"
+    echo -n "$BEFORE," >> $LOG_FILE
 
-        PROB=$(echo "$OUTPUT" | grep -Po 'probability \K.*' | awk '{print ($1+0)}')
-        echo -n "$PROB," >> $LOG_FILE
+    PROB=$(echo "$OUTPUT" | grep -Po 'probability \K.*' | awk '{print ($1+0)}')
+    echo -n "$PROB," >> $LOG_FILE
 
-        QLEN=$(echo "$OUTPUT" | grep -Po 'backlog \K.*' | awk '{print ($2+0)}')
-        echo -n "$QLEN," >> $LOG_FILE
+    QLEN=$(echo "$OUTPUT" | grep -Po 'backlog \K.*' | awk '{print ($2+0)}')
+    echo -n "$QLEN," >> $LOG_FILE
 
-        QDELAY_US=$(echo "$OUTPUT" | grep -Po 'delay \K.*' | awk '{print ($1+0)}')
-        QDELAY_MS=$(echo "scale=6; $QDELAY_US / 1000" | bc)
-        echo -n "$QDELAY_MS" >> $LOG_FILE
-        printf "\n" >> $LOG_FILE
+    QDELAY_US=$(echo "$OUTPUT" | grep -Po 'delay \K.*' | awk '{print ($1+0)}')
+    QDELAY_MS=$(echo "scale=6; $QDELAY_US / 1000" | bc)
+    echo -n "$QDELAY_MS" >> $LOG_FILE
+    printf "\n" >> $LOG_FILE
 
-	AFTER=`date +%s.%N`
-	SLEEP_TIME=`echo $BEFORE $AFTER $INTERVAL | awk '{ st = $3 - ($2 - $1) ; if ( st < 0 ) st = 0 ; print st }'`
-	sleep $SLEEP_TIME
+    AFTER=`date +%s.%N`
+    SLEEP_TIME=`echo $BEFORE $AFTER $INTERVAL | awk '{ st = $3 - ($2 - $1) ; if ( st < 0 ) st = 0 ; print st }'`
+    sleep $SLEEP_TIME
 done

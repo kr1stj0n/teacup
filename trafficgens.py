@@ -71,11 +71,11 @@ def start_nttcp_server(counter='1', file_prefix='', remote_dir='',
 
     if hostOS == 'FreeBSD':
         # Reduces TIME_WAIT state to 30 seconds (2*MSL)
-	run('sysctl -w net.inet.tcp.msl=15000')
+        run('sysctl -w net.inet.tcp.msl=15000')
 
     elif hostOS == 'Linux':
         # Recycle TIME_WAIT sockets faster
-	run('sysctl -w net.ipv4.tcp_tw_recycle=1')
+        run('sysctl -w net.ipv4.tcp_tw_recycle=1')
 
     # start nttcp
     logfile = remote_dir + file_prefix + '_' + \
@@ -122,11 +122,11 @@ def start_nttcp_client(counter='1', file_prefix='', remote_dir='', port='',
 
     if hostOS == 'FreeBSD':
         # Reduces TIME_WAIT state to 30 seconds (2*MSL)
-	run('sysctl -w net.inet.tcp.msl=15000')
+        run('sysctl -w net.inet.tcp.msl=15000')
 
     elif hostOS == 'Linux':
         # Recycle TIME_WAIT sockets faster
-	run('sysctl -w net.ipv4.tcp_tw_recycle=1')
+        run('sysctl -w net.ipv4.tcp_tw_recycle=1')
 
     # start nttcp
     # number of bufs to send
@@ -1471,21 +1471,17 @@ def _start_dash_streaming_dashjs(counter='1', file_prefix='', remote_dir='', ser
     with open(xinit_filename,"w") as xinitrc:
 
       if browser == 'chrome':
-
-	  xinitrc.write("chrome --disable-web-security --incognito --user-data-dir 'http://"
-	    + player_path +
-	    "/index.html?mpd=http://%s:%s/%ssec/%s'" % \
+          xinitrc.write("chrome --disable-web-security --incognito --user-data-dir 'http://"
+            + player_path + "/index.html?mpd=http://%s:%s/%ssec/%s'" % \
 	    (serv, serv_port,chunk_size,mpd))
 
       elif browser == 'firefox':
-
-	  xinitrc.write("dbus-run-session firefox -private-window 'http://"
-	    + player_path +
-	    "/index.html?mpd=http://%s:%s/%ssec/%s'" % \
-	  (serv, serv_port,chunk_size,mpd))
+          xinitrc.write("dbus-run-session firefox -private-window 'http://"
+                        + player_path + "/index.html?mpd=http://%s:%s/%ssec/%s'" % \
+                        (serv, serv_port,chunk_size,mpd))
 
       else:
-	  abort('Browser not supported')
+          abort('Browser not supported')
 
     put(xinit_filename, '/root/.xinitrc')
 
@@ -1519,17 +1515,17 @@ def start_dash_streaming_dashjs(counter='1', file_prefix='', remote_dir='', loca
     "Start dash.js DASH traffic flow"
 
     if client == '':
-	abort('Must specify client')
+        abort('Must specify client')
     if serv == '':
         abort('Must specify server')
     if serv_port == '':
-	abort('Must specify server port')
+        abort('Must specify server port')
     if chunk_size == '':
-	abort('Must specify video chunk size')
+        abort('Must specify video chunk size')
     if mpd == '':
-	abort('Must specify MPD')
+        abort('Must specify MPD')
     if player_path == '':
-	abort('Must specify player path')
+        abort('Must specify player path')
 
     client, dummy = get_address_pair(client)
     dummy, dest_internal = get_address_pair(serv)

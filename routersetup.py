@@ -143,7 +143,7 @@ def init_dummynet_pipe(counter='1', source='', dest='', rate='', delay='',
 #  @param queue_size_mult Multiply 'bdp' queue size with this factor
 #                         (must be a floating point)
 #  @param queue_disc fifo (mapped to pfifo, FreeBSD compatibility), fq_codel, codel, red,
-#                    choke, pfifo, pie (only as patch), shq, ...
+#                    choke, pfifo, pie (only as patch), shq, hull, abc, ...
 #  @param queue_disc_params Parameters for queing discipline, see man pages for queuing
 #                           disciplines
 #  @param bidir If '0' (pipe only in forward direction),

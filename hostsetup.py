@@ -1056,10 +1056,10 @@ def init_cc_algo(algo='default', *args, **kwargs):
     if algo != 'default' and algo != 'reno' and algo != 'newreno' and \
             algo != 'cubic' and algo != 'cdg' and algo != 'htcp' and \
             algo != 'compound' and algo != 'hd' and algo != 'vegas' and \
-            algo != 'dctcp' and algo != 'lgc':
+            algo != 'dctcp' and algo != 'lgc' and algo != 'abc':
         abort(
             'Available TCP algorithms: ' +
-            'default, (new)reno, cubic, cdg, hd, htcp, compound, vegas, dctcp, lgc')
+            'default, (new)reno, cubic, cdg, hd, htcp, compound, vegas, dctcp, lgc, abc')
 
     # get type of current host
     htype = get_type_cached(env.host_string)
@@ -1109,7 +1109,7 @@ def init_cc_algo(algo='default', *args, **kwargs):
             run('modprobe tcp_htcp')
         elif algo == 'vegas':
             run('modprobe tcp_vegas')
-        elif algo == 'dctcp' or algo == 'lgc':
+        elif algo == 'dctcp' or algo == 'lgc' or algo == 'abc':
             puts('TCP congestion control algorithm %s is supported only in ' \
                  'Linux' % algo)
         else:
@@ -1279,4 +1279,3 @@ def init_hosts(ecn='0', tcp_cc_algo='default', *args, **kwargs):
         *
         args,
         **kwargs)
-
