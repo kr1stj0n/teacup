@@ -63,7 +63,7 @@ while [ 1 ] ; do
 
     QDELAY_US=$(echo "$OUTPUT" | grep -Po 'delay \K.*' | awk '{print ($1+0)}')
     QDELAY_MS=$(echo "scale=6; $QDELAY_US / 1000" | bc)
-    echo -n "$QDELAY_MS" >> $LOG_FILE
+    echo -n "$QDELAY_US" >> $LOG_FILE
     printf "\n" >> $LOG_FILE
 
     AFTER=`date +%s.%N`
